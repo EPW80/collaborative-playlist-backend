@@ -45,6 +45,11 @@ fi
 
 echo "✅ Got authentication token"
 
+# Test 2.5: Get current user
+echo "👤 2.5. Getting current user info..."
+curl -s -X GET $BASE_URL/auth/me \
+  -H "Authorization: Bearer $TOKEN" | jq '.'
+
 # Test 3: Create a playlist
 echo "📚 3. Creating a playlist..."
 PLAYLIST_RESPONSE=$(curl -s -X POST $BASE_URL/playlists \
@@ -78,7 +83,7 @@ SONG_RESPONSE=$(curl -s -X POST $BASE_URL/songs \
   -H "Authorization: Bearer $TOKEN" \
   -d "{
     \"playlistId\": \"$PLAYLIST_ID\",
-    \"name\": \"Bohemian Rhapsody\",
+    \"title\": \"Bohemian Rhapsody\",
     \"artist\": \"Queen\",
     \"album\": \"A Night at the Opera\",
     \"duration\": 355
@@ -109,6 +114,15 @@ curl -s -X PUT $BASE_URL/playlists/$PLAYLIST_ID \
   -d '{
     "name": "My Updated Test Playlist",
     "description": "Updated description"
+  }' | jq '.'
+
+# Test 10: Update user profile
+echo "👤 10. Updating user profile..."
+curl -s -X PUT $BASE_URL/auth/profile \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "username": "testuser_updated"
   }' | jq '.'
 
 echo ""

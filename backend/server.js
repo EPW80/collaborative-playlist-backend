@@ -4,7 +4,12 @@ const mongoose = require("mongoose");
 const socketIO = require("socket.io");
 const http = require("http");
 const securityMiddleware = require("./src/middleware/security");
+const { handleProcessErrors } = require("./src/middleware/errorHandler");
+const connectDB = require("./src/config/database");
 require("dotenv").config();
+
+// Set up process-level error handling
+handleProcessErrors();
 
 const app = express();
 const server = http.createServer(app);
@@ -19,17 +24,11 @@ securityMiddleware(app);
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Database connection
-mongoose.connect(
-  process.env.MONGODB_URI || "mongodb://localhost:27017/collaborative-playlist",
-  {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  }
-);
+connectDB();
 
 // Socket.io for real-time updates
 io.on("connection", (socket) => {
@@ -51,11 +50,17 @@ io.on("connection", (socket) => {
 // Make io accessible to routes
 app.set("io", io);
 
-// Routes
-app.use("/api/auth", require("./src/routes/auth"));
-app.use("/api/playlists", require("./src/routes/playlists"));
-app.use("/api/songs", require("./src/routes/songs"));
-app.use("/api/search", require("./src/routes/search"));
+// Configure routes
+require("./src/routes")(app);
+
+// 404 handler for undefined routes
+app.use("*", (req, res, next) => {
+  const { AppError } = require("./src/middleware/errorHandler");
+  next(new AppError(`Route ${req.originalUrl} not found`, 404));
+});
+
+// Global error handler
+app.use(require("./src/middleware/errorHandler").globalErrorHandler);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
