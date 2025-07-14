@@ -71,4 +71,14 @@ const songSchema = new mongoose.Schema(
   }
 );
 
+// Database indexes for performance optimization
+songSchema.index({ playlist: 1, order: 1 });
+songSchema.index({ playlist: 1, addedAt: -1 });
+songSchema.index({ title: 'text', artist: 'text', album: 'text' }); // Text search
+// Note: spotifyId already has unique index from schema definition
+songSchema.index({ youtubeId: 1 }, { sparse: true });
+songSchema.index({ addedBy: 1, addedAt: -1 });
+// Compound index for playlist queries with ordering
+songSchema.index({ playlist: 1, order: 1, addedAt: -1 });
+
 module.exports = mongoose.model("Song", songSchema);

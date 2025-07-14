@@ -69,4 +69,14 @@ const playlistSchema = new mongoose.Schema(
   }
 );
 
+// Database indexes for performance optimization
+playlistSchema.index({ creator: 1, createdAt: -1 });
+playlistSchema.index({ 'collaborators.user': 1 });
+playlistSchema.index({ isPublic: 1, createdAt: -1 });
+playlistSchema.index({ tags: 1 });
+// Compound index for access control queries
+playlistSchema.index({ creator: 1, 'collaborators.user': 1, isPublic: 1 });
+// Index for public playlist discovery
+playlistSchema.index({ isPublic: 1, tags: 1, createdAt: -1 });
+
 module.exports = mongoose.model("Playlist", playlistSchema);

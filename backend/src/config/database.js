@@ -1,11 +1,13 @@
 const mongoose = require("mongoose");
 const config = require("./index");
+const { createIndexes } = require("../utils/indexMigration");
 
 /**
  * @fileoverview Database connection configuration
  * @module config/database
  * @requires mongoose
  * @requires ./index
+ * @requires ../utils/indexMigration
  */
 
 const connectDB = async () => {
@@ -18,6 +20,9 @@ const connectDB = async () => {
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`📊 Database: ${conn.connection.name}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+    // Create database indexes for performance optimization
+    await createIndexes();
 
     // Connection event listeners
     mongoose.connection.on("error", (err) => {

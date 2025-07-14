@@ -57,4 +57,9 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+// Database indexes for performance optimization
+// Note: email and username already have unique indexes from schema definitions
+userSchema.index({ createdAt: -1 });
+userSchema.index({ spotifyId: 1 }, { sparse: true });
+
 module.exports = mongoose.model("User", userSchema);
