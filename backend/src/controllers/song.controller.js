@@ -1,6 +1,7 @@
 const Playlist = require("../models/Playlist");
 const Song = require("../models/Song");
 const { AppError, asyncHandler } = require("../middleware/errorHandler");
+const cacheService = require("../services/cacheService");
 
 // Get all songs from a playlist
 exports.getSongs = asyncHandler(async (req, res, next) => {
@@ -8,6 +9,18 @@ exports.getSongs = asyncHandler(async (req, res, next) => {
 
   if (!playlistId) {
     return next(new AppError("Playlist ID is required", 400));
+  }
+
+  const cacheKey = cacheService.keys.playlistSongs(playlistId);
+  
+  // Try cache first
+  const cachedSongs = await cacheService.get(cacheKey);
+  if (cachedSongs) {
+    return res.json({
+      success: true,
+      data: { songs: cachedSongs },
+      cached: true
+    });
   }
 
   const playlist = await Playlist.findById(playlistId).populate({
@@ -32,6 +45,9 @@ exports.getSongs = asyncHandler(async (req, res, next) => {
   if (!playlist.isPublic && !isCreator && !isCollaborator) {
     return next(new AppError("Access denied: This playlist is private", 403));
   }
+
+  // Cache the songs for 10 minutes
+  await cacheService.set(cacheKey, playlist.songs, 600);
 
   res.json({
     success: true,
@@ -119,6 +135,10 @@ exports.addSong = asyncHandler(async (req, res, next) => {
     "addedBy",
     "username"
   );
+
+  // Invalidate relevant caches
+  await cacheService.invalidate(cacheService.keys.playlistSongs(playlistId));
+  await cacheService.invalidate(cacheService.keys.playlist(playlistId));
 
   // Notify clients about the new song
   const io = req.app.get("io");

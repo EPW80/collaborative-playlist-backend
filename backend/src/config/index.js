@@ -6,6 +6,12 @@ const config = {
       "mongodb://localhost:27017/collaborative-playlist",
     jwtSecret: process.env.JWT_SECRET || "dev-secret-key-change-in-production",
     frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
+    redis: {
+      host: process.env.REDIS_HOST || "localhost",
+      port: process.env.REDIS_PORT || 6379,
+      password: process.env.REDIS_PASSWORD,
+      db: process.env.REDIS_DB || 0,
+    },
     spotify: {
       clientId: process.env.SPOTIFY_CLIENT_ID,
       clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
@@ -22,6 +28,12 @@ const config = {
     mongoUri: process.env.MONGODB_URI,
     jwtSecret: process.env.JWT_SECRET,
     frontendUrl: process.env.FRONTEND_URL,
+    redis: {
+      host: process.env.REDIS_HOST || "localhost",
+      port: process.env.REDIS_PORT || 6379,
+      password: process.env.REDIS_PASSWORD,
+      db: process.env.REDIS_DB || 0,
+    },
     spotify: {
       clientId: process.env.SPOTIFY_CLIENT_ID,
       clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
@@ -38,6 +50,12 @@ const config = {
       "mongodb://localhost:27017/collaborative-playlist-test",
     jwtSecret: process.env.JWT_SECRET || "test-secret-key",
     frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
+    redis: {
+      host: process.env.REDIS_HOST || "localhost",
+      port: process.env.REDIS_PORT || 6379,
+      password: process.env.REDIS_PASSWORD,
+      db: process.env.REDIS_TEST_DB || 1, // Use different DB for tests
+    },
     spotify: {
       clientId: process.env.SPOTIFY_CLIENT_ID,
       clientSecret: process.env.SPOTIFY_CLIENT_SECRET,

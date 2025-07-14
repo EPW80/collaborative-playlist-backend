@@ -1,9 +1,22 @@
 const Playlist = require("../models/Playlist");
 const User = require("../models/User");
 const { AppError, asyncHandler } = require("../middleware/errorHandler");
+const cacheService = require("../services/cacheService");
 
 // Get all playlists
 exports.getPlaylists = asyncHandler(async (req, res, next) => {
+  const cacheKey = cacheService.keys.userPlaylists(req.userId);
+  
+  // Try cache first
+  const cachedPlaylists = await cacheService.get(cacheKey);
+  if (cachedPlaylists) {
+    return res.json({
+      success: true,
+      data: { playlists: cachedPlaylists },
+      cached: true
+    });
+  }
+
   // Get user's playlists and public playlists
   const playlists = await Playlist.find({
     $or: [
@@ -14,6 +27,9 @@ exports.getPlaylists = asyncHandler(async (req, res, next) => {
   })
     .populate("creator", "username")
     .populate("collaborators.user", "username");
+
+  // Cache the results for 15 minutes
+  await cacheService.set(cacheKey, playlists, 900);
 
   res.json({
     success: true,
@@ -44,6 +60,12 @@ exports.createPlaylist = asyncHandler(async (req, res, next) => {
     .populate("creator", "username")
     .populate("collaborators.user", "username");
 
+  // Invalidate relevant caches
+  await cacheService.invalidate(cacheService.keys.userPlaylists(req.userId));
+  if (isPublic) {
+    await cacheService.invalidate('public:playlists:*');
+  }
+
   // Notify clients about the new playlist
   const io = req.app.get("io");
   if (io) {
@@ -63,7 +85,30 @@ exports.createPlaylist = asyncHandler(async (req, res, next) => {
 
 // Get a single playlist by ID
 exports.getPlaylistById = asyncHandler(async (req, res, next) => {
-  const playlist = await Playlist.findById(req.params.id)
+  const playlistId = req.params.id;
+  const cacheKey = cacheService.keys.playlist(playlistId);
+  
+  // Try cache first
+  const cachedPlaylist = await cacheService.get(cacheKey);
+  if (cachedPlaylist) {
+    // Still need to check access control even with cached data
+    const isCreator = cachedPlaylist.creator._id.toString() === req.userId;
+    const isCollaborator = cachedPlaylist.collaborators.some(
+      (collab) => collab.user._id.toString() === req.userId
+    );
+
+    if (!cachedPlaylist.isPublic && !isCreator && !isCollaborator) {
+      return next(new AppError("Access denied: This playlist is private", 403));
+    }
+
+    return res.json({
+      success: true,
+      data: { playlist: cachedPlaylist },
+      cached: true
+    });
+  }
+
+  const playlist = await Playlist.findById(playlistId)
     .populate("creator", "username")
     .populate("collaborators.user", "username")
     .populate({
@@ -88,6 +133,9 @@ exports.getPlaylistById = asyncHandler(async (req, res, next) => {
   if (!playlist.isPublic && !isCreator && !isCollaborator) {
     return next(new AppError("Access denied: This playlist is private", 403));
   }
+
+  // Cache the playlist for 10 minutes
+  await cacheService.set(cacheKey, playlist, 600);
 
   res.json({
     success: true,

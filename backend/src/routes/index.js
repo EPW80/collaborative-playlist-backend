@@ -7,6 +7,7 @@ const authRoutes = require('./auth');
 const playlistRoutes = require('./playlists');
 const songRoutes = require('./songs');
 const searchRoutes = require('./search');
+const cacheRoutes = require('./cache');
 
 module.exports = (app) => {
   // API routes
@@ -14,6 +15,7 @@ module.exports = (app) => {
   app.use('/api/playlists', playlistRoutes);
   app.use('/api/songs', songRoutes);
   app.use('/api/search', searchRoutes);
+  app.use('/api/cache', cacheRoutes);
 
   // Health check endpoint
   app.get('/health', (req, res) => {
