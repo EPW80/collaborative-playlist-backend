@@ -1,8 +1,8 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const auth = require('../middleware/auth');
-const cacheService = require('../services/cacheService');
-const { asyncHandler } = require('../middleware/errorHandler');
+const auth = require("../middleware/auth");
+const cacheService = require("../services/cacheService");
+const { asyncHandler } = require("../middleware/errorHandler");
 
 /**
  * @fileoverview Cache management routes for monitoring and debugging
@@ -25,7 +25,7 @@ router.use(auth);
  * @returns {Object} 500 - Server error
  * @example
  * // Request: GET /api/cache/stats
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -39,14 +39,17 @@ router.use(auth);
  *   }
  * }
  */
-router.get('/stats', asyncHandler(async (req, res) => {
-  const stats = await cacheService.getStats();
-  
-  res.json({
-    success: true,
-    data: stats
-  });
-}));
+router.get(
+  "/stats",
+  asyncHandler(async (req, res) => {
+    const stats = await cacheService.getStats();
+
+    res.json({
+      success: true,
+      data: stats,
+    });
+  })
+);
 
 /**
  * @route   POST /api/cache/invalidate
@@ -63,7 +66,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
  * {
  *   "pattern": "playlist:*"
  * }
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -73,32 +76,35 @@ router.get('/stats', asyncHandler(async (req, res) => {
  *   }
  * }
  */
-router.post('/invalidate', asyncHandler(async (req, res) => {
-  const { pattern } = req.body;
-  
-  if (!pattern) {
-    return res.status(400).json({
-      success: false,
-      message: 'Pattern is required'
+router.post(
+  "/invalidate",
+  asyncHandler(async (req, res) => {
+    const { pattern } = req.body;
+
+    if (!pattern) {
+      return res.status(400).json({
+        success: false,
+        message: "Pattern is required",
+      });
+    }
+
+    // In production, you might want to restrict this to admin users only
+    if (process.env.NODE_ENV === "production") {
+      // Add admin check here if needed
+      // if (!req.user.isAdmin) {
+      //   return res.status(403).json({ message: 'Admin access required' });
+      // }
+    }
+
+    const keysDeleted = await cacheService.invalidate(pattern);
+
+    res.json({
+      success: true,
+      message: "Cache invalidated successfully",
+      data: { keysDeleted },
     });
-  }
-
-  // In production, you might want to restrict this to admin users only
-  if (process.env.NODE_ENV === 'production') {
-    // Add admin check here if needed
-    // if (!req.user.isAdmin) {
-    //   return res.status(403).json({ message: 'Admin access required' });
-    // }
-  }
-
-  const keysDeleted = await cacheService.invalidate(pattern);
-  
-  res.json({
-    success: true,
-    message: 'Cache invalidated successfully',
-    data: { keysDeleted }
-  });
-}));
+  })
+);
 
 /**
  * @route   DELETE /api/cache/flush
@@ -110,36 +116,39 @@ router.post('/invalidate', asyncHandler(async (req, res) => {
  * @returns {Object} 500 - Server error
  * @example
  * // Request: DELETE /api/cache/flush
- * 
+ *
  * // Response:
  * {
  *   "success": true,
  *   "message": "All cache data flushed successfully"
  * }
  */
-router.delete('/flush', asyncHandler(async (req, res) => {
-  // Restrict to development environment or admin users
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(403).json({
-      success: false,
-      message: 'Cache flush not allowed in production'
-    });
-  }
+router.delete(
+  "/flush",
+  asyncHandler(async (req, res) => {
+    // Restrict to development environment or admin users
+    if (process.env.NODE_ENV === "production") {
+      return res.status(403).json({
+        success: false,
+        message: "Cache flush not allowed in production",
+      });
+    }
 
-  const success = await cacheService.flush();
-  
-  if (success) {
-    res.json({
-      success: true,
-      message: 'All cache data flushed successfully'
-    });
-  } else {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to flush cache'
-    });
-  }
-}));
+    const success = await cacheService.flush();
+
+    if (success) {
+      res.json({
+        success: true,
+        message: "All cache data flushed successfully",
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: "Failed to flush cache",
+      });
+    }
+  })
+);
 
 /**
  * @route   GET /api/cache/health
@@ -150,7 +159,7 @@ router.delete('/flush', asyncHandler(async (req, res) => {
  * @returns {Object} 503 - Cache unavailable
  * @example
  * // Request: GET /api/cache/health
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -162,29 +171,32 @@ router.delete('/flush', asyncHandler(async (req, res) => {
  *   }
  * }
  */
-router.get('/health', asyncHandler(async (req, res) => {
-  const isConnected = cacheService.isConnected;
-  const stats = await cacheService.getStats();
-  
-  const healthData = {
-    status: isConnected ? 'healthy' : 'unhealthy',
-    connected: isConnected,
-    lastCheck: new Date().toISOString(),
-    ...stats
-  };
+router.get(
+  "/health",
+  asyncHandler(async (req, res) => {
+    const isConnected = cacheService.isConnected;
+    const stats = await cacheService.getStats();
 
-  if (isConnected) {
-    res.json({
-      success: true,
-      data: healthData
-    });
-  } else {
-    res.status(503).json({
-      success: false,
-      message: 'Cache service unavailable',
-      data: healthData
-    });
-  }
-}));
+    const healthData = {
+      status: isConnected ? "healthy" : "unhealthy",
+      connected: isConnected,
+      lastCheck: new Date().toISOString(),
+      ...stats,
+    };
+
+    if (isConnected) {
+      res.json({
+        success: true,
+        data: healthData,
+      });
+    } else {
+      res.status(503).json({
+        success: false,
+        message: "Cache service unavailable",
+        data: healthData,
+      });
+    }
+  })
+);
 
 module.exports = router;

@@ -2,8 +2,8 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
-const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
+const mongoSanitize = require("express-mongo-sanitize");
+const xss = require("xss-clean");
 
 /**
  * @fileoverview Security middleware configuration
@@ -39,7 +39,7 @@ const securityMiddleware = (app) => {
 
   // Prevent NoSQL injection attacks
   app.use(mongoSanitize());
-  
+
   // Prevent XSS attacks
   app.use(xss());
 

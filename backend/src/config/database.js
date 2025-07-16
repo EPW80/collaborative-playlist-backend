@@ -21,7 +21,7 @@ const connectDB = async () => {
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`📊 Database: ${conn.connection.name}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
 
     // Initialize cache service
     await cacheService.connect();
@@ -44,7 +44,6 @@ const connectDB = async () => {
       console.log("🔌 MongoDB connection closed through app termination");
       process.exit(0);
     });
-
   } catch (error) {
     console.error("💥 Database connection error:", error.message);
     process.exit(1);

@@ -12,14 +12,14 @@ exports.getSongs = asyncHandler(async (req, res, next) => {
   }
 
   const cacheKey = cacheService.keys.playlistSongs(playlistId);
-  
+
   // Try cache first
   const cachedSongs = await cacheService.get(cacheKey);
   if (cachedSongs) {
     return res.json({
       success: true,
       data: { songs: cachedSongs },
-      cached: true
+      cached: true,
     });
   }
 

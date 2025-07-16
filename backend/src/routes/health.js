@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
 /**
@@ -15,7 +15,7 @@ const router = express.Router();
  * @returns {Object} 500 - Server error (if unhealthy)
  * @example
  * // Request: GET /health
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -28,16 +28,16 @@ const router = express.Router();
  *   }
  * }
  */
-router.get('/health', (req, res) => {
+router.get("/health", (req, res) => {
   res.json({
     success: true,
-    message: 'Server is healthy',
+    message: "Server is healthy",
     data: {
-      status: 'OK',
+      status: "OK",
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development'
-    }
+      environment: process.env.NODE_ENV || "development",
+    },
   });
 });
 
@@ -48,7 +48,7 @@ router.get('/health', (req, res) => {
  * @returns {Object} 200 - API information and endpoint list
  * @example
  * // Request: GET /info
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -65,20 +65,20 @@ router.get('/health', (req, res) => {
  *   }
  * }
  */
-router.get('/info', (req, res) => {
+router.get("/info", (req, res) => {
   res.json({
     success: true,
     data: {
-      name: 'Collaborative Playlist Manager API',
-      version: '1.0.0',
-      description: 'Backend API for collaborative music playlist management',
+      name: "Collaborative Playlist Manager API",
+      version: "1.0.0",
+      description: "Backend API for collaborative music playlist management",
       endpoints: {
-        auth: '/api/auth',
-        playlists: '/api/playlists',
-        songs: '/api/songs',
-        search: '/api/search'
-      }
-    }
+        auth: "/api/auth",
+        playlists: "/api/playlists",
+        songs: "/api/songs",
+        search: "/api/search",
+      },
+    },
   });
 });
 

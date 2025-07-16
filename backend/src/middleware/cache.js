@@ -1,4 +1,4 @@
-const cacheService = require('../services/cacheService');
+const cacheService = require("../services/cacheService");
 
 /**
  * @fileoverview Cache middleware for automatic response caching
@@ -18,9 +18,9 @@ const cacheService = require('../services/cacheService');
 const cacheMiddleware = (options = {}) => {
   const {
     ttl = 3600, // 1 hour default
-    keyPrefix = 'api',
+    keyPrefix = "api",
     keyGenerator = null,
-    excludeMethods = ['POST', 'PUT', 'DELETE', 'PATCH']
+    excludeMethods = ["POST", "PUT", "DELETE", "PATCH"],
   } = options;
 
   return async (req, res, next) => {
@@ -34,16 +34,18 @@ const cacheMiddleware = (options = {}) => {
     if (keyGenerator) {
       cacheKey = keyGenerator(req);
     } else {
-      const userId = req.user?.id || 'anonymous';
+      const userId = req.user?.id || "anonymous";
       const path = req.originalUrl || req.url;
       const query = JSON.stringify(req.query);
-      cacheKey = `${keyPrefix}:${userId}:${Buffer.from(path + query).toString('base64')}`;
+      cacheKey = `${keyPrefix}:${userId}:${Buffer.from(path + query).toString(
+        "base64"
+      )}`;
     }
 
     try {
       // Try to get cached response
       const cachedData = await cacheService.get(cacheKey);
-      
+
       if (cachedData) {
         console.log(`⚡ Cache hit for ${req.method} ${req.originalUrl}`);
         return res.json(cachedData);
@@ -53,11 +55,11 @@ const cacheMiddleware = (options = {}) => {
       const originalJson = res.json;
 
       // Override res.json to cache the response
-      res.json = function(data) {
+      res.json = function (data) {
         // Cache successful responses
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          cacheService.set(cacheKey, data, ttl).catch(err => {
-            console.error('Cache set error:', err.message);
+          cacheService.set(cacheKey, data, ttl).catch((err) => {
+            console.error("Cache set error:", err.message);
           });
         }
 
@@ -66,9 +68,8 @@ const cacheMiddleware = (options = {}) => {
       };
 
       next();
-
     } catch (error) {
-      console.error('Cache middleware error:', error.message);
+      console.error("Cache middleware error:", error.message);
       next();
     }
   };
@@ -82,7 +83,7 @@ const cacheMiddleware = (options = {}) => {
 const invalidateCache = (patterns) => {
   return async (req, res, next) => {
     const patternsArray = Array.isArray(patterns) ? patterns : [patterns];
-    
+
     // Store original response methods
     const originalJson = res.json;
     const originalSend = res.send;
@@ -93,31 +94,34 @@ const invalidateCache = (patterns) => {
           // Replace placeholders with actual values
           let resolvedPattern = pattern;
           if (req.user?.id) {
-            resolvedPattern = resolvedPattern.replace(':userId', req.user.id);
+            resolvedPattern = resolvedPattern.replace(":userId", req.user.id);
           }
           if (req.params?.id) {
-            resolvedPattern = resolvedPattern.replace(':id', req.params.id);
+            resolvedPattern = resolvedPattern.replace(":id", req.params.id);
           }
           if (req.params?.playlistId) {
-            resolvedPattern = resolvedPattern.replace(':playlistId', req.params.playlistId);
+            resolvedPattern = resolvedPattern.replace(
+              ":playlistId",
+              req.params.playlistId
+            );
           }
 
           await cacheService.invalidate(resolvedPattern);
         } catch (error) {
-          console.error('Cache invalidation error:', error.message);
+          console.error("Cache invalidation error:", error.message);
         }
       }
     };
 
     // Override response methods to invalidate cache after successful operations
-    res.json = function(data) {
+    res.json = function (data) {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         invalidateCachePatterns();
       }
       return originalJson.call(this, data);
     };
 
-    res.send = function(data) {
+    res.send = function (data) {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         invalidateCachePatterns();
       }
@@ -135,46 +139,47 @@ const cacheConfigs = {
   // User data - cache for 30 minutes
   user: {
     ttl: 1800,
-    keyPrefix: 'user',
-    keyGenerator: (req) => cacheService.keys.user(req.user?.id || req.params.id)
+    keyPrefix: "user",
+    keyGenerator: (req) =>
+      cacheService.keys.user(req.user?.id || req.params.id),
   },
 
   // Playlists - cache for 15 minutes
   playlist: {
     ttl: 900,
-    keyPrefix: 'playlist',
+    keyPrefix: "playlist",
     keyGenerator: (req) => {
       const playlistId = req.params.id || req.query.playlistId;
       return cacheService.keys.playlist(playlistId);
-    }
+    },
   },
 
   // Public playlists - cache for 5 minutes
   publicPlaylists: {
     ttl: 300,
-    keyPrefix: 'public',
+    keyPrefix: "public",
     keyGenerator: (req) => {
       const page = req.query.page || 1;
       const limit = req.query.limit || 20;
       return cacheService.keys.publicPlaylists(page, limit);
-    }
+    },
   },
 
   // Songs - cache for 10 minutes
   songs: {
     ttl: 600,
-    keyPrefix: 'songs',
+    keyPrefix: "songs",
     keyGenerator: (req) => {
       const playlistId = req.query.playlistId || req.params.playlistId;
       return cacheService.keys.playlistSongs(playlistId);
-    }
+    },
   },
 
   // External API data - cache for 1 hour
   external: {
     ttl: 3600,
-    keyPrefix: 'external'
-  }
+    keyPrefix: "external",
+  },
 };
 
 /**
@@ -182,31 +187,21 @@ const cacheConfigs = {
  */
 const invalidationPatterns = {
   // User operations
-  user: ['user:*'],
-  
+  user: ["user:*"],
+
   // Playlist operations
-  playlist: [
-    'playlist::id:*',
-    'user::userId:playlists*',
-    'public:playlists:*'
-  ],
-  
+  playlist: ["playlist::id:*", "user::userId:playlists*", "public:playlists:*"],
+
   // Song operations
-  song: [
-    'playlist::playlistId:*',
-    'songs:*'
-  ],
-  
+  song: ["playlist::playlistId:*", "songs:*"],
+
   // Collaboration operations
-  collaboration: [
-    'playlist::id:*',
-    'user:*:playlists*'
-  ]
+  collaboration: ["playlist::id:*", "user:*:playlists*"],
 };
 
 module.exports = {
   cacheMiddleware,
   invalidateCache,
   cacheConfigs,
-  invalidationPatterns
+  invalidationPatterns,
 };

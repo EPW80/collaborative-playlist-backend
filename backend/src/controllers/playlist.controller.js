@@ -6,14 +6,14 @@ const cacheService = require("../services/cacheService");
 // Get all playlists
 exports.getPlaylists = asyncHandler(async (req, res, next) => {
   const cacheKey = cacheService.keys.userPlaylists(req.userId);
-  
+
   // Try cache first
   const cachedPlaylists = await cacheService.get(cacheKey);
   if (cachedPlaylists) {
     return res.json({
       success: true,
       data: { playlists: cachedPlaylists },
-      cached: true
+      cached: true,
     });
   }
 
@@ -63,7 +63,7 @@ exports.createPlaylist = asyncHandler(async (req, res, next) => {
   // Invalidate relevant caches
   await cacheService.invalidate(cacheService.keys.userPlaylists(req.userId));
   if (isPublic) {
-    await cacheService.invalidate('public:playlists:*');
+    await cacheService.invalidate("public:playlists:*");
   }
 
   // Notify clients about the new playlist
@@ -87,7 +87,7 @@ exports.createPlaylist = asyncHandler(async (req, res, next) => {
 exports.getPlaylistById = asyncHandler(async (req, res, next) => {
   const playlistId = req.params.id;
   const cacheKey = cacheService.keys.playlist(playlistId);
-  
+
   // Try cache first
   const cachedPlaylist = await cacheService.get(cacheKey);
   if (cachedPlaylist) {
@@ -104,7 +104,7 @@ exports.getPlaylistById = asyncHandler(async (req, res, next) => {
     return res.json({
       success: true,
       data: { playlist: cachedPlaylist },
-      cached: true
+      cached: true,
     });
   }
 

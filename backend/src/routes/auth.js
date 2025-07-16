@@ -49,7 +49,7 @@ const validateRequest = (req, res, next) => {
  *   "email": "john@example.com",
  *   "password": "securePassword123"
  * }
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -100,7 +100,7 @@ router.post(
  *   "email": "john@example.com",
  *   "password": "securePassword123"
  * }
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -140,7 +140,7 @@ router.post(
  * @example
  * // Headers:
  * // Authorization: Bearer jwt_token_here
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -177,7 +177,7 @@ router.get("/me", auth, getCurrentUser);
  *   "username": "newusername",
  *   "profilePicture": "https://example.com/profile.jpg"
  * }
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -229,7 +229,7 @@ router.put(
  *   "currentPassword": "oldPassword123",
  *   "newPassword": "newSecurePassword456"
  * }
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -268,7 +268,7 @@ router.put(
  * {
  *   "password": "userPassword123"
  * }
- * 
+ *
  * // Response:
  * {
  *   "success": true,
