@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -6,7 +8,6 @@ const http = require("http");
 const securityMiddleware = require("./src/middleware/security");
 const { handleProcessErrors } = require("./src/middleware/errorHandler");
 const connectDB = require("./src/config/database");
-require("dotenv").config();
 
 // Set up process-level error handling
 handleProcessErrors();

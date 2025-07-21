@@ -8,6 +8,7 @@ const playlistRoutes = require("./playlists");
 const songRoutes = require("./songs");
 const searchRoutes = require("./search");
 const cacheRoutes = require("./cache");
+const lyricsRoutes = require("./lyrics");
 
 module.exports = (app) => {
   // API routes
@@ -16,6 +17,7 @@ module.exports = (app) => {
   app.use("/api/songs", songRoutes);
   app.use("/api/search", searchRoutes);
   app.use("/api/cache", cacheRoutes);
+  app.use("/api/lyrics", lyricsRoutes);
 
   // Health check endpoint
   app.get("/health", (req, res) => {
@@ -72,6 +74,16 @@ module.exports = (app) => {
             "GET /api/search/artist?name=:name": "Get artist info",
             "GET /api/search/spotify/auth": "Get Spotify auth URL",
             "GET /api/search/spotify/callback": "Spotify OAuth callback",
+          },
+          lyrics: {
+            "GET /api/lyrics/health": "Check Genius API health",
+            "GET /api/lyrics/search?q=:query": "Search songs on Genius",
+            "GET /api/lyrics/song/:songId": "Get song details from Genius",
+            "GET /api/lyrics/artist/:artistId": "Get artist info from Genius",
+            "GET /api/lyrics/artist/:artistId/songs": "Get artist's songs",
+            "GET /api/lyrics/find?title=:title&artist=:artist": "Find lyrics by title and artist",
+            "GET /api/lyrics/trending": "Get trending songs from Genius",
+            "POST /api/lyrics/enrich/:songId": "Add lyrics info to database song",
           },
         },
       },

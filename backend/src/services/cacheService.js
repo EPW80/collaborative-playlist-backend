@@ -37,7 +37,14 @@ class CacheService {
       songSearch: (playlistId, query) => `search:${playlistId}:${Buffer.from(query).toString('base64')}`,
       userAuth: (userId) => `auth:${userId}`,
       spotifyTrack: (trackId) => `spotify:track:${trackId}`,
-      lastfmArtist: (artistName) => `lastfm:artist:${Buffer.from(artistName).toString('base64')}`
+      lastfmArtist: (artistName) => `lastfm:artist:${Buffer.from(artistName).toString('base64')}`,
+      // Genius API cache keys
+      geniusSearch: (query, limit) => `genius:search:${Buffer.from(query).toString('base64')}:${limit}`,
+      geniusSong: (songId) => `genius:song:${songId}`,
+      geniusArtist: (artistId) => `genius:artist:${artistId}`,
+      geniusArtistSongs: (artistId, page, limit) => `genius:artist:${artistId}:songs:${page}:${limit}`,
+      geniusLyrics: (title, artist) => `genius:lyrics:${Buffer.from(`${title}-${artist}`).toString('base64')}`,
+      geniusTrending: (limit) => `genius:trending:${limit}`
     };
   }
 

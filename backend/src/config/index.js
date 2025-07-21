@@ -22,6 +22,9 @@ const config = {
     lastfm: {
       apiKey: process.env.LASTFM_API_KEY,
     },
+    genius: {
+      accessToken: process.env.GENIUS_ACCESS_TOKEN,
+    },
   },
   production: {
     port: process.env.PORT || 3001,
@@ -41,6 +44,9 @@ const config = {
     },
     lastfm: {
       apiKey: process.env.LASTFM_API_KEY,
+    },
+    genius: {
+      accessToken: process.env.GENIUS_ACCESS_TOKEN,
     },
   },
   test: {
@@ -63,6 +69,9 @@ const config = {
     },
     lastfm: {
       apiKey: process.env.LASTFM_API_KEY,
+    },
+    genius: {
+      accessToken: process.env.GENIUS_ACCESS_TOKEN,
     },
   },
 };
