@@ -16,7 +16,7 @@ const Playlist = require("../models/Playlist");
  */
 exports.getSessionStatus = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
-  const userId = req.user.id;
+  const userId = req.userId;
 
   // Validate playlist access
   const hasAccess = await realtimeService.validatePlaylistAccess(
@@ -46,7 +46,7 @@ exports.getSessionStatus = asyncHandler(async (req, res) => {
  */
 exports.voteSong = asyncHandler(async (req, res) => {
   const { songId, voteType, playlistId } = req.body;
-  const userId = req.user.id;
+  const userId = req.userId;
 
   if (!["upvote", "downvote"].includes(voteType)) {
     throw new AppError("Invalid vote type", 400);
@@ -127,7 +127,7 @@ exports.voteSong = asyncHandler(async (req, res) => {
  */
 exports.updateNowPlaying = asyncHandler(async (req, res) => {
   const { playlistId, songId, action, position = 0 } = req.body;
-  const userId = req.user.id;
+  const userId = req.userId;
 
   if (!["play", "pause", "stop", "seek"].includes(action)) {
     throw new AppError("Invalid action", 400);
@@ -195,7 +195,7 @@ exports.updateNowPlaying = asyncHandler(async (req, res) => {
  */
 exports.sendNotification = asyncHandler(async (req, res) => {
   const { playlistId, type, message, targetUsers } = req.body;
-  const userId = req.user.id;
+  const userId = req.userId;
 
   // Validate playlist access
   const hasAccess = await realtimeService.validatePlaylistAccess(
@@ -254,7 +254,7 @@ exports.sendNotification = asyncHandler(async (req, res) => {
  */
 exports.getSongVotes = asyncHandler(async (req, res) => {
   const { songId } = req.params;
-  const userId = req.user.id;
+  const userId = req.userId;
 
   const song = await Song.findById(songId).populate("playlist");
   if (!song) {
@@ -295,7 +295,7 @@ exports.getSongVotes = asyncHandler(async (req, res) => {
 exports.getActivityFeed = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   const { limit = 20 } = req.query;
-  const userId = req.user.id;
+  const userId = req.userId;
 
   // Validate playlist access
   const hasAccess = await realtimeService.validatePlaylistAccess(
@@ -340,7 +340,7 @@ exports.getActivityFeed = asyncHandler(async (req, res) => {
  */
 exports.updatePresence = asyncHandler(async (req, res) => {
   const { playlistId, cursorPosition, element, status = "active" } = req.body;
-  const userId = req.user.id;
+  const userId = req.userId;
 
   // Validate playlist access
   const hasAccess = await realtimeService.validatePlaylistAccess(
@@ -405,14 +405,3 @@ exports.getRealtimeStats = asyncHandler(async (req, res) => {
     data: stats,
   });
 });
-
-module.exports = {
-  getSessionStatus,
-  voteSong,
-  updateNowPlaying,
-  sendNotification,
-  getSongVotes,
-  getActivityFeed,
-  updatePresence,
-  getRealtimeStats,
-};

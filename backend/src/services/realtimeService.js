@@ -522,7 +522,7 @@ class RealtimeService {
       if (!playlist) return false;
 
       return (
-        playlist.owner.toString() === userId ||
+        playlist.creator.toString() === userId ||
         playlist.collaborators.includes(userId) ||
         playlist.isPublic
       );
