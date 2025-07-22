@@ -1,6 +1,7 @@
 const express = require("express");
 const { body, validationResult } = require("express-validator");
 const auth = require("../middleware/auth");
+const cacheService = require("../services/cacheService");
 const {
   register,
   login,
@@ -129,11 +130,74 @@ router.post(
 );
 
 /**
- * @route   GET /api/auth/me
- * @desc    Get current authenticated user's profile
+ * @route   POST /api/auth/logout
+ * @desc    Logout user and cleanup real-time sessions
  * @access  Private
  * @headers {string} Authorization - Bearer JWT token
- * @returns {Object} 200 - User profile data
+ * @returns {Object} 200 - Logout successful
+ * @returns {Object} 401 - Unauthorized
+ * @example
+ * // Response:
+ * {
+ *   "success": true,
+ *   "message": "Logout successful"
+ * }
+ */
+router.post("/logout", auth, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    // Update user status to offline
+    await cacheService.set(
+      cacheService.keys.userStatus(userId),
+      {
+        status: "offline",
+        lastActivity: new Date(),
+        currentPlaylist: null,
+      },
+      3600
+    );
+
+    // Cleanup real-time sessions
+    const realtimeService = req.app.get("realtimeService");
+    if (realtimeService && realtimeService.connectedUsers.has(userId)) {
+      const userData = realtimeService.connectedUsers.get(userId);
+      if (userData && userData.playlistId) {
+        // Remove from playlist session
+        const playlistId = userData.playlistId;
+        if (realtimeService.playlistSessions.has(playlistId)) {
+          realtimeService.playlistSessions.get(playlistId).delete(userId);
+        }
+
+        // Notify other users
+        const io = req.app.get("io");
+        if (io) {
+          io.to(`playlist-${playlistId}`).emit("user-logged-out", {
+            userId,
+            timestamp: new Date(),
+          });
+        }
+      }
+
+      // Remove from connected users
+      realtimeService.connectedUsers.delete(userId);
+    }
+
+    res.json({
+      success: true,
+      message: "Logout successful",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/auth/me
+ * @desc    Get current authenticated user's profile with real-time status
+ * @access  Private
+ * @headers {string} Authorization - Bearer JWT token
+ * @returns {Object} 200 - User profile data with activity status
  * @returns {Object} 401 - Unauthorized or invalid token
  * @returns {Object} 404 - User not found
  * @returns {Object} 500 - Server error
@@ -150,12 +214,48 @@ router.post(
  *       "username": "johndoe",
  *       "email": "john@example.com",
  *       "profilePicture": "profile_url",
- *       "createdAt": "2025-07-11T12:00:00.000Z"
+ *       "createdAt": "2025-07-11T12:00:00.000Z",
+ *       "status": "active",
+ *       "lastActivity": "2025-07-21T12:00:00.000Z",
+ *       "activePlaylists": ["playlist_id_1", "playlist_id_2"]
  *     }
  *   }
  * }
  */
-router.get("/me", auth, getCurrentUser);
+router.get("/me", auth, async (req, res, next) => {
+  try {
+    // Get user profile
+    await getCurrentUser(req, res, next);
+
+    // If response was successful, enhance with real-time data
+    if (res.headersSent) return;
+
+    const userId = req.user.id;
+
+    // Get user status from cache
+    const userStatus = (await cacheService.get(
+      cacheService.keys.userStatus(userId)
+    )) || {
+      status: "offline",
+      lastActivity: new Date(),
+      activePlaylists: [],
+    };
+
+    // Get original response data
+    const originalResponse = res.json;
+    res.json = function (data) {
+      if (data.success && data.data && data.data.user) {
+        data.data.user = {
+          ...data.data.user,
+          ...userStatus,
+        };
+      }
+      return originalResponse.call(this, data);
+    };
+  } catch (error) {
+    next(error);
+  }
+});
 
 /**
  * @route   PUT /api/auth/profile
@@ -285,5 +385,177 @@ router.delete(
   ],
   deleteAccount
 );
+
+/**
+ * @route   PUT /api/auth/status
+ * @desc    Update user online status and activity
+ * @access  Private
+ * @headers {string} Authorization - Bearer JWT token
+ * @param   {Object} body - Status update data
+ * @param   {string} body.status - User status ('active', 'idle', 'away', 'offline')
+ * @param   {string} [body.currentPlaylist] - Currently active playlist ID
+ * @returns {Object} 200 - Status updated successfully
+ * @returns {Object} 400 - Validation error
+ * @returns {Object} 401 - Unauthorized
+ * @example
+ * // Request body:
+ * {
+ *   "status": "active",
+ *   "currentPlaylist": "playlist_id"
+ * }
+ *
+ * // Response:
+ * {
+ *   "success": true,
+ *   "message": "Status updated successfully",
+ *   "data": {
+ *     "status": "active",
+ *     "lastActivity": "2025-07-21T12:00:00.000Z",
+ *     "currentPlaylist": "playlist_id"
+ *   }
+ * }
+ */
+router.put(
+  "/status",
+  auth,
+  [
+    body("status")
+      .isIn(["active", "idle", "away", "offline"])
+      .withMessage("Status must be active, idle, away, or offline"),
+    body("currentPlaylist")
+      .optional()
+      .isMongoId()
+      .withMessage("Current playlist must be a valid ID"),
+  ],
+  async (req, res, next) => {
+    try {
+      const { status, currentPlaylist } = req.body;
+      const userId = req.user.id;
+
+      // Update user status in cache
+      const userStatus = {
+        status,
+        lastActivity: new Date(),
+        currentPlaylist: currentPlaylist || null,
+        timestamp: new Date(),
+      };
+
+      await cacheService.set(
+        cacheService.keys.userStatus(userId),
+        userStatus,
+        3600 // 1 hour
+      );
+
+      // Notify real-time service if available
+      const realtimeService = req.app.get("realtimeService");
+      if (realtimeService) {
+        // Update user presence across all active playlists
+        const io = req.app.get("io");
+        if (io) {
+          io.emit("user-status-updated", {
+            userId,
+            ...userStatus,
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        message: "Status updated successfully",
+        data: userStatus,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route   GET /api/auth/activity
+ * @desc    Get user's recent activity and session history
+ * @access  Private
+ * @headers {string} Authorization - Bearer JWT token
+ * @param   {number} [limit] - Number of activities to return (default: 20)
+ * @returns {Object} 200 - User activity data
+ * @returns {Object} 401 - Unauthorized
+ * @example
+ * // Response:
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "currentStatus": "active",
+ *     "activeSessions": [
+ *       {
+ *         "playlistId": "playlist_id",
+ *         "playlistName": "My Playlist",
+ *         "joinedAt": "2025-07-21T11:30:00.000Z",
+ *         "lastActivity": "2025-07-21T12:00:00.000Z"
+ *       }
+ *     ],
+ *     "recentActivities": [
+ *       {
+ *         "type": "song-added",
+ *         "playlistId": "playlist_id",
+ *         "timestamp": "2025-07-21T11:45:00.000Z",
+ *         "details": { "songTitle": "Example Song" }
+ *       }
+ *     ]
+ *   }
+ * }
+ */
+router.get("/activity", auth, async (req, res, next) => {
+  try {
+    const { limit = 20 } = req.query;
+    const userId = req.user.id;
+
+    // Get current user status
+    const userStatus = (await cacheService.get(
+      cacheService.keys.userStatus(userId)
+    )) || {
+      status: "offline",
+      lastActivity: new Date(),
+    };
+
+    // Get active sessions (if real-time service is available)
+    let activeSessions = [];
+    const realtimeService = req.app.get("realtimeService");
+    if (realtimeService && realtimeService.connectedUsers.has(userId)) {
+      const userData = realtimeService.connectedUsers.get(userId);
+      if (userData && userData.playlistId) {
+        // Get playlist info for active session
+        const Playlist = require("../models/Playlist");
+        const playlist = await Playlist.findById(userData.playlistId).select(
+          "name"
+        );
+        if (playlist) {
+          activeSessions.push({
+            playlistId: userData.playlistId,
+            playlistName: playlist.name,
+            joinedAt: userData.joinedAt,
+            lastActivity:
+              userData.status === "active" ? new Date() : userData.lastActivity,
+          });
+        }
+      }
+    }
+
+    // Get recent activities from cache or database
+    // This could be enhanced to track more detailed user activities
+    const recentActivities = []; // Placeholder for actual activity tracking
+
+    res.json({
+      success: true,
+      data: {
+        currentStatus: userStatus.status,
+        lastActivity: userStatus.lastActivity,
+        activeSessions,
+        recentActivities: recentActivities.slice(0, parseInt(limit)),
+        totalSessions: activeSessions.length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = router;

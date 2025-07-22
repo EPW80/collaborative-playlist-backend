@@ -47,7 +47,25 @@ const songSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    votes: [
+    votes: {
+      upvotes: {
+        type: Number,
+        default: 0,
+      },
+      downvotes: {
+        type: Number,
+        default: 0,
+      },
+      total: {
+        type: Number,
+        default: 0,
+      },
+      lastVoteUpdate: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+    userVotes: [
       {
         user: {
           type: mongoose.Schema.Types.ObjectId,
@@ -55,15 +73,32 @@ const songSchema = new mongoose.Schema(
         },
         type: {
           type: String,
-          enum: ["up", "down"],
+          enum: ["upvote", "downvote"],
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
         },
       },
     ],
+    geniusData: {
+      geniusId: Number,
+      lyricsUrl: String,
+      thumbnail: String,
+      fullImage: String,
+      releaseDate: String,
+      stats: {
+        hotness: Boolean,
+        pageViews: Number,
+      },
+    },
     metadata: {
       genre: String,
       year: Number,
       explicit: Boolean,
       popularity: Number,
+      externalUrl: String,
+      previewUrl: String,
     },
   },
   {

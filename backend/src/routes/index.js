@@ -9,6 +9,7 @@ const songRoutes = require("./songs");
 const searchRoutes = require("./search");
 const cacheRoutes = require("./cache");
 const lyricsRoutes = require("./lyrics");
+const realtimeRoutes = require("./realtime");
 
 module.exports = (app) => {
   // API routes
@@ -18,6 +19,7 @@ module.exports = (app) => {
   app.use("/api/search", searchRoutes);
   app.use("/api/cache", cacheRoutes);
   app.use("/api/lyrics", lyricsRoutes);
+  app.use("/api/realtime", realtimeRoutes);
 
   // Health check endpoint
   app.get("/health", (req, res) => {
@@ -81,9 +83,23 @@ module.exports = (app) => {
             "GET /api/lyrics/song/:songId": "Get song details from Genius",
             "GET /api/lyrics/artist/:artistId": "Get artist info from Genius",
             "GET /api/lyrics/artist/:artistId/songs": "Get artist's songs",
-            "GET /api/lyrics/find?title=:title&artist=:artist": "Find lyrics by title and artist",
+            "GET /api/lyrics/find?title=:title&artist=:artist":
+              "Find lyrics by title and artist",
             "GET /api/lyrics/trending": "Get trending songs from Genius",
-            "POST /api/lyrics/enrich/:songId": "Add lyrics info to database song",
+            "POST /api/lyrics/enrich/:songId":
+              "Add lyrics info to database song",
+          },
+          realtime: {
+            "GET /api/realtime/session/:playlistId":
+              "Get playlist session status",
+            "POST /api/realtime/vote": "Vote on a song (upvote/downvote)",
+            "POST /api/realtime/now-playing": "Update now playing status",
+            "POST /api/realtime/notification": "Send real-time notification",
+            "GET /api/realtime/votes/:songId": "Get song vote statistics",
+            "GET /api/realtime/activity/:playlistId":
+              "Get playlist activity feed",
+            "POST /api/realtime/presence": "Update user presence/cursor",
+            "GET /api/realtime/stats": "Get real-time system statistics",
           },
         },
       },

@@ -1,10 +1,16 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { body, param, validationResult } = require('express-validator');
-const auth = require('../middleware/auth');
-const { getPlaylists, createPlaylist, getPlaylistById, updatePlaylist, deletePlaylist } = require('../controllers/playlist.controller');
-const Playlist = require('../models/Playlist');
-const User = require('../models/User');
+const { body, param, validationResult } = require("express-validator");
+const auth = require("../middleware/auth");
+const {
+  getPlaylists,
+  createPlaylist,
+  getPlaylistById,
+  updatePlaylist,
+  deletePlaylist,
+} = require("../controllers/playlist.controller");
+const Playlist = require("../models/Playlist");
+const User = require("../models/User");
 
 /**
  * @fileoverview Playlist management routes
@@ -55,7 +61,7 @@ router.use(auth);
  *   }
  * }
  */
-router.get('/', getPlaylists);
+router.get("/", getPlaylists);
 
 /**
  * @route   POST /api/playlists
@@ -76,7 +82,7 @@ router.get('/', getPlaylists);
  *   "description": "A collection of my favorite songs",
  *   "isPublic": true
  * }
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -94,12 +100,23 @@ router.get('/', getPlaylists);
  *   }
  * }
  */
-router.post('/', 
+router.post(
+  "/",
   [
-    body('name').isLength({ min: 1, max: 100 }).trim().withMessage('Name must be 1-100 characters'),
-    body('description').optional().isLength({ max: 500 }).trim().withMessage('Description must be less than 500 characters'),
-    body('isPublic').optional().isBoolean().withMessage('isPublic must be a boolean'),
-    validateRequest
+    body("name")
+      .isLength({ min: 1, max: 100 })
+      .trim()
+      .withMessage("Name must be 1-100 characters"),
+    body("description")
+      .optional()
+      .isLength({ max: 500 })
+      .trim()
+      .withMessage("Description must be less than 500 characters"),
+    body("isPublic")
+      .optional()
+      .isBoolean()
+      .withMessage("isPublic must be a boolean"),
+    validateRequest,
   ],
   createPlaylist
 );
@@ -138,11 +155,9 @@ router.post('/',
  *   }
  * }
  */
-router.get('/:id', 
-  [
-    param('id').isMongoId().withMessage('Invalid playlist ID'),
-    validateRequest
-  ],
+router.get(
+  "/:id",
+  [param("id").isMongoId().withMessage("Invalid playlist ID"), validateRequest],
   getPlaylistById
 );
 
@@ -169,7 +184,7 @@ router.get('/:id',
  *   "description": "Updated description",
  *   "isPublic": false
  * }
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -184,15 +199,33 @@ router.get('/:id',
  *   }
  * }
  */
-router.put('/:id', 
+router.put(
+  "/:id",
   [
-    param('id').isMongoId().withMessage('Invalid playlist ID'),
-    body('name').optional().isLength({ min: 1, max: 100 }).trim().withMessage('Name must be 1-100 characters'),
-    body('description').optional().isLength({ max: 500 }).trim().withMessage('Description must be less than 500 characters'),
-    body('isPublic').optional().isBoolean().withMessage('isPublic must be a boolean'),
-    body('collaborators').optional().isArray().withMessage('Collaborators must be an array'),
-    body('collaborators.*').optional().isMongoId().withMessage('Invalid collaborator ID'),
-    validateRequest
+    param("id").isMongoId().withMessage("Invalid playlist ID"),
+    body("name")
+      .optional()
+      .isLength({ min: 1, max: 100 })
+      .trim()
+      .withMessage("Name must be 1-100 characters"),
+    body("description")
+      .optional()
+      .isLength({ max: 500 })
+      .trim()
+      .withMessage("Description must be less than 500 characters"),
+    body("isPublic")
+      .optional()
+      .isBoolean()
+      .withMessage("isPublic must be a boolean"),
+    body("collaborators")
+      .optional()
+      .isArray()
+      .withMessage("Collaborators must be an array"),
+    body("collaborators.*")
+      .optional()
+      .isMongoId()
+      .withMessage("Invalid collaborator ID"),
+    validateRequest,
   ],
   updatePlaylist
 );
@@ -215,11 +248,9 @@ router.put('/:id',
  *   "message": "Playlist deleted successfully"
  * }
  */
-router.delete('/:id', 
-  [
-    param('id').isMongoId().withMessage('Invalid playlist ID'),
-    validateRequest
-  ],
+router.delete(
+  "/:id",
+  [param("id").isMongoId().withMessage("Invalid playlist ID"), validateRequest],
   deletePlaylist
 );
 
@@ -241,59 +272,69 @@ router.delete('/:id',
  * {
  *   "userId": "user_id_to_add"
  * }
- * 
+ *
  * // Response:
  * {
  *   "message": "Collaborator added successfully"
  * }
  */
-router.post('/:id/collaborators', 
+router.post(
+  "/:id/collaborators",
   [
-    param('id').isMongoId().withMessage('Invalid playlist ID'),
-    body('userId').isMongoId().withMessage('Valid user ID is required'),
-    validateRequest
+    param("id").isMongoId().withMessage("Invalid playlist ID"),
+    body("userId").isMongoId().withMessage("Valid user ID is required"),
+    validateRequest,
   ],
   async (req, res) => {
     // ...existing code...
     try {
       const playlist = await Playlist.findById(req.params.id);
-      
+
       if (!playlist) {
-        return res.status(404).json({ message: 'Playlist not found' });
+        return res.status(404).json({ message: "Playlist not found" });
       }
-      
+
       // Only creator can add collaborators
       if (playlist.creator.toString() !== req.userId) {
-        return res.status(403).json({ message: 'Not authorized' });
+        return res.status(403).json({ message: "Not authorized" });
       }
-      
+
       const { userId } = req.body;
-      
+
       // Check if user exists
       const user = await User.findById(userId);
       if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Check if already a collaborator
-      if (playlist.collaborators.some(collab => collab.user.toString() === userId)) {
-        return res.status(400).json({ message: 'User is already a collaborator' });
+      if (
+        playlist.collaborators.some(
+          (collab) => collab.user.toString() === userId
+        )
+      ) {
+        return res
+          .status(400)
+          .json({ message: "User is already a collaborator" });
       }
-      
-      playlist.collaborators.push({ 
+
+      playlist.collaborators.push({
         user: userId,
-        role: 'editor',
-        joinedAt: new Date()
+        role: "editor",
+        joinedAt: new Date(),
       });
       await playlist.save();
-      
-      const io = req.app.get('io');
-      io.to(`playlist-${req.params.id}`).emit('collaborator-added', { playlistId: req.params.id, userId });
-      
-      res.json({ message: 'Collaborator added successfully' });
+
+      const io = req.app.get("io");
+      io.to(`playlist-${req.params.id}`).emit("collaborator-added", {
+        playlistId: req.params.id,
+        userId,
+      });
+
+      res.json({ message: "Collaborator added successfully" });
     } catch (error) {
-      console.error('Error adding collaborator:', error);
-      res.status(500).json({ message: 'Server error' });
+      console.error("Error adding collaborator:", error);
+      res.status(500).json({ message: "Server error" });
     }
   }
 );
@@ -316,41 +357,42 @@ router.post('/:id/collaborators',
  *   "message": "Collaborator removed successfully"
  * }
  */
-router.delete('/:id/collaborators/:userId', 
+router.delete(
+  "/:id/collaborators/:userId",
   [
-    param('id').isMongoId().withMessage('Invalid playlist ID'),
-    param('userId').isMongoId().withMessage('Invalid user ID'),
-    validateRequest
+    param("id").isMongoId().withMessage("Invalid playlist ID"),
+    param("userId").isMongoId().withMessage("Invalid user ID"),
+    validateRequest,
   ],
   async (req, res) => {
     // ...existing code...
     try {
       const playlist = await Playlist.findById(req.params.id);
-      
+
       if (!playlist) {
-        return res.status(404).json({ message: 'Playlist not found' });
+        return res.status(404).json({ message: "Playlist not found" });
       }
-      
+
       // Only creator can remove collaborators
       if (playlist.creator.toString() !== req.userId) {
-        return res.status(403).json({ message: 'Not authorized' });
+        return res.status(403).json({ message: "Not authorized" });
       }
-      
+
       playlist.collaborators = playlist.collaborators.filter(
-        collab => collab.user.toString() !== req.params.userId
+        (collab) => collab.user.toString() !== req.params.userId
       );
       await playlist.save();
-      
-      const io = req.app.get('io');
-      io.to(`playlist-${req.params.id}`).emit('collaborator-removed', { 
-        playlistId: req.params.id, 
-        userId: req.params.userId 
+
+      const io = req.app.get("io");
+      io.to(`playlist-${req.params.id}`).emit("collaborator-removed", {
+        playlistId: req.params.id,
+        userId: req.params.userId,
       });
-      
-      res.json({ message: 'Collaborator removed successfully' });
+
+      res.json({ message: "Collaborator removed successfully" });
     } catch (error) {
-      console.error('Error removing collaborator:', error);
-      res.status(500).json({ message: 'Server error' });
+      console.error("Error removing collaborator:", error);
+      res.status(500).json({ message: "Server error" });
     }
   }
 );

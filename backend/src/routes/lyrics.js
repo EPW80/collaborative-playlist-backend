@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { body, param, query, validationResult } = require('express-validator');
-const auth = require('../middleware/auth');
+const { body, param, query, validationResult } = require("express-validator");
+const auth = require("../middleware/auth");
 const {
   searchSongs,
   getSongDetails,
@@ -10,8 +10,8 @@ const {
   findLyrics,
   getTrendingSongs,
   healthCheck,
-  enrichSongWithLyrics
-} = require('../controllers/genius.controller');
+  enrichSongWithLyrics,
+} = require("../controllers/genius.controller");
 
 /**
  * @fileoverview Genius API routes for lyrics and song information
@@ -26,9 +26,9 @@ const {
 const validateRequest = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      errors: errors.array() 
+      errors: errors.array(),
     });
   }
   next();
@@ -41,7 +41,7 @@ const validateRequest = (req, res, next) => {
  * @returns {Object} 200 - API health status
  * @returns {Object} 503 - API unavailable
  */
-router.get('/health', healthCheck);
+router.get("/health", healthCheck);
 
 /**
  * @route   GET /api/lyrics/search
@@ -54,7 +54,7 @@ router.get('/health', healthCheck);
  * @returns {Object} 503 - Genius API error
  * @example
  * // Request: GET /api/lyrics/search?q=bohemian rhapsody queen&limit=5
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -74,18 +74,22 @@ router.get('/health', healthCheck);
  *   }
  * }
  */
-router.get('/search', [
-  query('q')
-    .notEmpty()
-    .withMessage('Search query is required')
-    .isLength({ min: 1, max: 200 })
-    .withMessage('Query must be between 1 and 200 characters'),
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 25 })
-    .withMessage('Limit must be between 1 and 25'),
-  validateRequest
-], searchSongs);
+router.get(
+  "/search",
+  [
+    query("q")
+      .notEmpty()
+      .withMessage("Search query is required")
+      .isLength({ min: 1, max: 200 })
+      .withMessage("Query must be between 1 and 200 characters"),
+    query("limit")
+      .optional()
+      .isInt({ min: 1, max: 25 })
+      .withMessage("Limit must be between 1 and 25"),
+    validateRequest,
+  ],
+  searchSongs
+);
 
 /**
  * @route   GET /api/lyrics/song/:songId
@@ -97,12 +101,16 @@ router.get('/search', [
  * @returns {Object} 404 - Song not found
  * @returns {Object} 503 - Genius API error
  */
-router.get('/song/:songId', [
-  param('songId')
-    .isInt({ min: 1 })
-    .withMessage('Song ID must be a positive integer'),
-  validateRequest
-], getSongDetails);
+router.get(
+  "/song/:songId",
+  [
+    param("songId")
+      .isInt({ min: 1 })
+      .withMessage("Song ID must be a positive integer"),
+    validateRequest,
+  ],
+  getSongDetails
+);
 
 /**
  * @route   GET /api/lyrics/artist/:artistId
@@ -114,12 +122,16 @@ router.get('/song/:songId', [
  * @returns {Object} 404 - Artist not found
  * @returns {Object} 503 - Genius API error
  */
-router.get('/artist/:artistId', [
-  param('artistId')
-    .isInt({ min: 1 })
-    .withMessage('Artist ID must be a positive integer'),
-  validateRequest
-], getArtistDetails);
+router.get(
+  "/artist/:artistId",
+  [
+    param("artistId")
+      .isInt({ min: 1 })
+      .withMessage("Artist ID must be a positive integer"),
+    validateRequest,
+  ],
+  getArtistDetails
+);
 
 /**
  * @route   GET /api/lyrics/artist/:artistId/songs
@@ -132,20 +144,24 @@ router.get('/artist/:artistId', [
  * @returns {Object} 400 - Invalid parameters
  * @returns {Object} 503 - Genius API error
  */
-router.get('/artist/:artistId/songs', [
-  param('artistId')
-    .isInt({ min: 1 })
-    .withMessage('Artist ID must be a positive integer'),
-  query('page')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Page must be a positive integer'),
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 50 })
-    .withMessage('Limit must be between 1 and 50'),
-  validateRequest
-], getArtistSongs);
+router.get(
+  "/artist/:artistId/songs",
+  [
+    param("artistId")
+      .isInt({ min: 1 })
+      .withMessage("Artist ID must be a positive integer"),
+    query("page")
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage("Page must be a positive integer"),
+    query("limit")
+      .optional()
+      .isInt({ min: 1, max: 50 })
+      .withMessage("Limit must be between 1 and 50"),
+    validateRequest,
+  ],
+  getArtistSongs
+);
 
 /**
  * @route   GET /api/lyrics/find
@@ -159,7 +175,7 @@ router.get('/artist/:artistId/songs', [
  * @returns {Object} 503 - Genius API error
  * @example
  * // Request: GET /api/lyrics/find?title=Bohemian Rhapsody&artist=Queen
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -174,19 +190,23 @@ router.get('/artist/:artistId/songs', [
  *   }
  * }
  */
-router.get('/find', [
-  query('title')
-    .notEmpty()
-    .withMessage('Song title is required')
-    .isLength({ min: 1, max: 200 })
-    .withMessage('Title must be between 1 and 200 characters'),
-  query('artist')
-    .notEmpty()
-    .withMessage('Artist name is required')
-    .isLength({ min: 1, max: 100 })
-    .withMessage('Artist name must be between 1 and 100 characters'),
-  validateRequest
-], findLyrics);
+router.get(
+  "/find",
+  [
+    query("title")
+      .notEmpty()
+      .withMessage("Song title is required")
+      .isLength({ min: 1, max: 200 })
+      .withMessage("Title must be between 1 and 200 characters"),
+    query("artist")
+      .notEmpty()
+      .withMessage("Artist name is required")
+      .isLength({ min: 1, max: 100 })
+      .withMessage("Artist name must be between 1 and 100 characters"),
+    validateRequest,
+  ],
+  findLyrics
+);
 
 /**
  * @route   GET /api/lyrics/trending
@@ -196,13 +216,17 @@ router.get('/find', [
  * @returns {Object} 200 - Trending songs
  * @returns {Object} 503 - Genius API error
  */
-router.get('/trending', [
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 50 })
-    .withMessage('Limit must be between 1 and 50'),
-  validateRequest
-], getTrendingSongs);
+router.get(
+  "/trending",
+  [
+    query("limit")
+      .optional()
+      .isInt({ min: 1, max: 50 })
+      .withMessage("Limit must be between 1 and 50"),
+    validateRequest,
+  ],
+  getTrendingSongs
+);
 
 /**
  * @route   POST /api/lyrics/enrich/:songId
@@ -215,12 +239,14 @@ router.get('/trending', [
  * @returns {Object} 404 - Song or lyrics not found
  * @returns {Object} 503 - Genius API error
  */
-router.post('/enrich/:songId', [
-  auth,
-  param('songId')
-    .isMongoId()
-    .withMessage('Invalid song ID format'),
-  validateRequest
-], enrichSongWithLyrics);
+router.post(
+  "/enrich/:songId",
+  [
+    auth,
+    param("songId").isMongoId().withMessage("Invalid song ID format"),
+    validateRequest,
+  ],
+  enrichSongWithLyrics
+);
 
 module.exports = router;

@@ -1,5 +1,5 @@
-const redis = require('redis');
-const config = require('../config/index');
+const redis = require("redis");
+const config = require("../config/index");
 
 /**
  * @fileoverview Redis caching service for performance optimization
@@ -14,7 +14,7 @@ class CacheService {
     this.isConnected = false;
     this.retryAttempts = 0;
     this.maxRetries = 5;
-    
+
     // Performance metrics
     this.metrics = {
       hits: 0,
@@ -23,7 +23,7 @@ class CacheService {
       deletes: 0,
       errors: 0,
       totalResponseTime: 0,
-      requestCount: 0
+      requestCount: 0,
     };
 
     // Cache key generators
@@ -32,19 +32,36 @@ class CacheService {
       userPlaylists: (userId) => `user:${userId}:playlists`,
       playlist: (playlistId) => `playlist:${playlistId}`,
       playlistSongs: (playlistId) => `playlist:${playlistId}:songs`,
-      playlistCollaborators: (playlistId) => `playlist:${playlistId}:collaborators`,
-      publicPlaylists: (page = 1, limit = 20) => `public:playlists:${page}:${limit}`,
-      songSearch: (playlistId, query) => `search:${playlistId}:${Buffer.from(query).toString('base64')}`,
+      playlistCollaborators: (playlistId) =>
+        `playlist:${playlistId}:collaborators`,
+      publicPlaylists: (page = 1, limit = 20) =>
+        `public:playlists:${page}:${limit}`,
+      songSearch: (playlistId, query) =>
+        `search:${playlistId}:${Buffer.from(query).toString("base64")}`,
       userAuth: (userId) => `auth:${userId}`,
+      song: (songId) => `song:${songId}`,
       spotifyTrack: (trackId) => `spotify:track:${trackId}`,
-      lastfmArtist: (artistName) => `lastfm:artist:${Buffer.from(artistName).toString('base64')}`,
+      lastfmArtist: (artistName) =>
+        `lastfm:artist:${Buffer.from(artistName).toString("base64")}`,
       // Genius API cache keys
-      geniusSearch: (query, limit) => `genius:search:${Buffer.from(query).toString('base64')}:${limit}`,
+      geniusSearch: (query, limit) =>
+        `genius:search:${Buffer.from(query).toString("base64")}:${limit}`,
       geniusSong: (songId) => `genius:song:${songId}`,
       geniusArtist: (artistId) => `genius:artist:${artistId}`,
-      geniusArtistSongs: (artistId, page, limit) => `genius:artist:${artistId}:songs:${page}:${limit}`,
-      geniusLyrics: (title, artist) => `genius:lyrics:${Buffer.from(`${title}-${artist}`).toString('base64')}`,
-      geniusTrending: (limit) => `genius:trending:${limit}`
+      geniusArtistSongs: (artistId, page, limit) =>
+        `genius:artist:${artistId}:songs:${page}:${limit}`,
+      geniusLyrics: (title, artist) =>
+        `genius:lyrics:${Buffer.from(`${title}-${artist}`).toString("base64")}`,
+      geniusTrending: (limit) => `genius:trending:${limit}`,
+      // Real-time collaboration cache keys
+      playlistSession: (playlistId) => `session:playlist:${playlistId}:users`,
+      playlistCursors: (playlistId) => `session:playlist:${playlistId}:cursors`,
+      nowPlaying: (playlistId) => `session:playlist:${playlistId}:nowplaying`,
+      songVotes: (songId) => `votes:song:${songId}`,
+      playlistNotifications: (playlistId) =>
+        `notifications:playlist:${playlistId}`,
+      userStatus: (userId) => `status:user:${userId}`,
+      activeVotes: (playlistId) => `votes:playlist:${playlistId}:active`,
     };
   }
 
@@ -56,7 +73,7 @@ class CacheService {
     try {
       this.client = redis.createClient({
         socket: {
-          host: config.redis?.host || 'localhost',
+          host: config.redis?.host || "localhost",
           port: config.redis?.port || 6379,
           reconnectStrategy: (retries) => Math.min(retries * 50, 500),
         },
@@ -64,40 +81,39 @@ class CacheService {
         database: config.redis?.db || 0,
       });
 
-      this.client.on('connect', () => {
-        console.log('🔗 Redis connecting...');
+      this.client.on("connect", () => {
+        console.log("🔗 Redis connecting...");
       });
 
-      this.client.on('ready', () => {
-        console.log('✅ Redis connected and ready');
+      this.client.on("ready", () => {
+        console.log("✅ Redis connected and ready");
         this.isConnected = true;
         this.retryAttempts = 0;
       });
 
-      this.client.on('error', (err) => {
-        console.error('❌ Redis connection error:', err.message);
+      this.client.on("error", (err) => {
+        console.error("❌ Redis connection error:", err.message);
         this.isConnected = false;
         this.metrics.errors++;
       });
 
-      this.client.on('end', () => {
-        console.log('⚠️  Redis connection closed');
+      this.client.on("end", () => {
+        console.log("⚠️  Redis connection closed");
         this.isConnected = false;
       });
 
-      this.client.on('reconnecting', () => {
+      this.client.on("reconnecting", () => {
         this.retryAttempts++;
         console.log(`🔄 Redis reconnecting... (attempt ${this.retryAttempts})`);
       });
 
       // Connect to Redis
       await this.client.connect();
-      
+
       // Test connection
       await this.client.ping();
-      
     } catch (error) {
-      console.error('💥 Failed to connect to Redis:', error.message);
+      console.error("💥 Failed to connect to Redis:", error.message);
       this.isConnected = false;
       // Don't throw error - app should work without cache
     }
@@ -197,7 +213,10 @@ class CacheService {
       this.metrics.deletes += result;
       return result;
     } catch (error) {
-      console.error(`❌ Cache INVALIDATE error for pattern "${pattern}":`, error.message);
+      console.error(
+        `❌ Cache INVALIDATE error for pattern "${pattern}":`,
+        error.message
+      );
       this.metrics.errors++;
       return 0;
     }
@@ -237,12 +256,17 @@ class CacheService {
 
     try {
       const timestamp = Math.floor(expireAt.getTime() / 1000);
-      await this.client.set(key, JSON.stringify(value), 'EXPIREAT', timestamp);
-      console.log(`💾 Cache SET with expiry: ${key} (expires: ${expireAt.toISOString()})`);
+      await this.client.set(key, JSON.stringify(value), "EXPIREAT", timestamp);
+      console.log(
+        `💾 Cache SET with expiry: ${key} (expires: ${expireAt.toISOString()})`
+      );
       this.metrics.sets++;
       return true;
     } catch (error) {
-      console.error(`❌ Cache SET with expiry error for key "${key}":`, error.message);
+      console.error(
+        `❌ Cache SET with expiry error for key "${key}":`,
+        error.message
+      );
       this.metrics.errors++;
       return false;
     }
@@ -258,23 +282,23 @@ class CacheService {
     }
 
     try {
-      const info = await this.client.info('stats');
-      const lines = info.split('\r\n');
+      const info = await this.client.info("stats");
+      const lines = info.split("\r\n");
       const stats = {};
-      
-      lines.forEach(line => {
-        if (line.includes(':')) {
-          const [key, value] = line.split(':');
+
+      lines.forEach((line) => {
+        if (line.includes(":")) {
+          const [key, value] = line.split(":");
           stats[key] = isNaN(value) ? value : parseInt(value);
         }
       });
 
       return {
         connected: true,
-        stats
+        stats,
       };
     } catch (error) {
-      console.error('❌ Cache STATS error:', error.message);
+      console.error("❌ Cache STATS error:", error.message);
       return { connected: false, error: error.message };
     }
   }
@@ -290,10 +314,10 @@ class CacheService {
 
     try {
       await this.client.flushdb();
-      console.log('🧹 Cache FLUSHED');
+      console.log("🧹 Cache FLUSHED");
       return true;
     } catch (error) {
-      console.error('❌ Cache FLUSH error:', error.message);
+      console.error("❌ Cache FLUSH error:", error.message);
       return false;
     }
   }
@@ -306,9 +330,9 @@ class CacheService {
     if (this.client) {
       try {
         await this.client.quit();
-        console.log('🔌 Redis connection closed');
+        console.log("🔌 Redis connection closed");
       } catch (error) {
-        console.error('❌ Error closing Redis connection:', error.message);
+        console.error("❌ Error closing Redis connection:", error.message);
       }
     }
   }
@@ -318,19 +342,26 @@ class CacheService {
    * @returns {Object} Performance metrics
    */
   getMetrics() {
-    const avgResponseTime = this.metrics.requestCount > 0 
-      ? Math.round(this.metrics.totalResponseTime / this.metrics.requestCount * 100) / 100
-      : 0;
-      
-    const hitRate = (this.metrics.hits + this.metrics.misses) > 0
-      ? Math.round((this.metrics.hits / (this.metrics.hits + this.metrics.misses)) * 100)
-      : 0;
+    const avgResponseTime =
+      this.metrics.requestCount > 0
+        ? Math.round(
+            (this.metrics.totalResponseTime / this.metrics.requestCount) * 100
+          ) / 100
+        : 0;
+
+    const hitRate =
+      this.metrics.hits + this.metrics.misses > 0
+        ? Math.round(
+            (this.metrics.hits / (this.metrics.hits + this.metrics.misses)) *
+              100
+          )
+        : 0;
 
     return {
       ...this.metrics,
       averageResponseTime: avgResponseTime,
       hitRate: `${hitRate}%`,
-      connected: this.isConnected
+      connected: this.isConnected,
     };
   }
 
@@ -345,10 +376,9 @@ class CacheService {
       deletes: 0,
       errors: 0,
       totalResponseTime: 0,
-      requestCount: 0
+      requestCount: 0,
     };
   }
-
 }
 
 module.exports = new CacheService();

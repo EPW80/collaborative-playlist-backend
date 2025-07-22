@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
-const User = require('../models/User');
-const Playlist = require('../models/Playlist');
-const Song = require('../models/Song');
+const mongoose = require("mongoose");
+const User = require("../models/User");
+const Playlist = require("../models/Playlist");
+const Song = require("../models/Song");
 
 /**
  * @fileoverview Database index migration utility
@@ -15,23 +15,23 @@ const Song = require('../models/Song');
  */
 const createIndexes = async () => {
   try {
-    console.log('🔧 Starting database index creation...');
+    console.log("🔧 Starting database index creation...");
 
     // Create User indexes
-    console.log('📊 Creating User model indexes...');
+    console.log("📊 Creating User model indexes...");
     await User.createIndexes();
 
     // Create Playlist indexes
-    console.log('📊 Creating Playlist model indexes...');
+    console.log("📊 Creating Playlist model indexes...");
     await Playlist.createIndexes();
 
     // Create Song indexes
-    console.log('📊 Creating Song model indexes...');
+    console.log("📊 Creating Song model indexes...");
     await Song.createIndexes();
 
-    console.log('✅ All database indexes created successfully');
+    console.log("✅ All database indexes created successfully");
   } catch (error) {
-    console.error('❌ Error creating database indexes:', error);
+    console.error("❌ Error creating database indexes:", error);
     throw error;
   }
 };
@@ -49,10 +49,10 @@ const getIndexInfo = async () => {
     return {
       users: userIndexes,
       playlists: playlistIndexes,
-      songs: songIndexes
+      songs: songIndexes,
     };
   } catch (error) {
-    console.error('❌ Error getting index information:', error);
+    console.error("❌ Error getting index information:", error);
     throw error;
   }
 };
@@ -63,18 +63,18 @@ const getIndexInfo = async () => {
  */
 const recreateIndexes = async () => {
   try {
-    console.log('⚠️  Dropping existing indexes...');
-    
+    console.log("⚠️  Dropping existing indexes...");
+
     await User.collection.dropIndexes();
     await Playlist.collection.dropIndexes();
     await Song.collection.dropIndexes();
 
-    console.log('🔧 Recreating indexes...');
+    console.log("🔧 Recreating indexes...");
     await createIndexes();
 
-    console.log('✅ All indexes recreated successfully');
+    console.log("✅ All indexes recreated successfully");
   } catch (error) {
-    console.error('❌ Error recreating indexes:', error);
+    console.error("❌ Error recreating indexes:", error);
     throw error;
   }
 };
@@ -82,5 +82,5 @@ const recreateIndexes = async () => {
 module.exports = {
   createIndexes,
   getIndexInfo,
-  recreateIndexes
+  recreateIndexes,
 };

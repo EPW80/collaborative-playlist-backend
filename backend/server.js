@@ -8,6 +8,7 @@ const http = require("http");
 const securityMiddleware = require("./src/middleware/security");
 const { handleProcessErrors } = require("./src/middleware/errorHandler");
 const connectDB = require("./src/config/database");
+const realtimeService = require("./src/services/realtimeService");
 
 // Set up process-level error handling
 handleProcessErrors();
@@ -17,8 +18,13 @@ const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true,
   },
 });
+
+// Initialize real-time service
+realtimeService.initialize(io);
 
 // Apply security middleware
 securityMiddleware(app);
@@ -31,25 +37,9 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Database connection
 connectDB();
 
-// Socket.io for real-time updates
-io.on("connection", (socket) => {
-  console.log("New client connected");
-
-  socket.on("join-playlist", (playlistId) => {
-    socket.join(`playlist-${playlistId}`);
-  });
-
-  socket.on("leave-playlist", (playlistId) => {
-    socket.leave(`playlist-${playlistId}`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("Client disconnected");
-  });
-});
-
-// Make io accessible to routes
+// Make io and realtime service accessible to routes
 app.set("io", io);
+app.set("realtimeService", realtimeService);
 
 // Configure routes
 require("./src/routes")(app);

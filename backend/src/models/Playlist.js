@@ -63,6 +63,53 @@ const playlistSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // Real-time collaboration features
+    nowPlaying: {
+      songId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Song",
+      },
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      action: {
+        type: String,
+        enum: ["play", "pause", "stop", "seek"],
+        default: "stop",
+      },
+      position: {
+        type: Number,
+        default: 0,
+      },
+      timestamp: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+    activeSession: {
+      activeUsers: [
+        {
+          user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+          },
+          lastActivity: {
+            type: Date,
+            default: Date.now,
+          },
+          status: {
+            type: String,
+            enum: ["active", "idle", "away"],
+            default: "active",
+          },
+        },
+      ],
+      lastActivity: {
+        type: Date,
+        default: Date.now,
+      },
+    },
   },
   {
     timestamps: true,

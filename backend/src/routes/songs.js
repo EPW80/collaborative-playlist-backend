@@ -1,8 +1,14 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { body, param, query, validationResult } = require('express-validator');
-const auth = require('../middleware/auth');
-const { getSongs, addSong, removeSong, searchSongs, reorderSongs } = require('../controllers/song.controller');
+const { body, param, query, validationResult } = require("express-validator");
+const auth = require("../middleware/auth");
+const {
+  getSongs,
+  addSong,
+  removeSong,
+  searchSongs,
+  reorderSongs,
+} = require("../controllers/song.controller");
 
 /**
  * @fileoverview Song management routes for playlists
@@ -38,7 +44,7 @@ router.use(auth);
  * @returns {Object} 500 - Server error
  * @example
  * // Request: GET /api/songs?playlistId=playlist_id_here
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -59,10 +65,13 @@ router.use(auth);
  *   }
  * }
  */
-router.get('/', 
+router.get(
+  "/",
   [
-    query('playlistId').isMongoId().withMessage('Valid playlist ID is required'),
-    validateRequest
+    query("playlistId")
+      .isMongoId()
+      .withMessage("Valid playlist ID is required"),
+    validateRequest,
   ],
   getSongs
 );
@@ -81,7 +90,7 @@ router.get('/',
  * @returns {Object} 500 - Server error
  * @example
  * // Request: GET /api/songs/search?playlistId=playlist_id&q=queen
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -100,11 +109,14 @@ router.get('/',
  *   }
  * }
  */
-router.get('/search', 
+router.get(
+  "/search",
   [
-    query('playlistId').isMongoId().withMessage('Valid playlist ID is required'),
-    query('q').isLength({ min: 1 }).withMessage('Search query is required'),
-    validateRequest
+    query("playlistId")
+      .isMongoId()
+      .withMessage("Valid playlist ID is required"),
+    query("q").isLength({ min: 1 }).withMessage("Search query is required"),
+    validateRequest,
   ],
   searchSongs
 );
@@ -137,7 +149,7 @@ router.get('/search',
  *   "duration": 355,
  *   "spotifyId": "spotify_track_id"
  * }
- * 
+ *
  * // Response:
  * {
  *   "success": true,
@@ -157,16 +169,35 @@ router.get('/search',
  *   }
  * }
  */
-router.post('/', 
+router.post(
+  "/",
   [
-    body('playlistId').isMongoId().withMessage('Valid playlist ID is required'),
-    body('title').isLength({ min: 1, max: 200 }).trim().withMessage('Song title must be 1-200 characters'),
-    body('artist').isLength({ min: 1, max: 200 }).trim().withMessage('Artist name must be 1-200 characters'),
-    body('album').optional().isLength({ max: 200 }).trim().withMessage('Album name must be less than 200 characters'),
-    body('duration').isInt({ min: 1 }).withMessage('Duration must be a positive integer'),
-    body('spotifyId').optional().isString().withMessage('Spotify ID must be a string'),
-    body('youtubeId').optional().isString().withMessage('YouTube ID must be a string'),
-    validateRequest
+    body("playlistId").isMongoId().withMessage("Valid playlist ID is required"),
+    body("title")
+      .isLength({ min: 1, max: 200 })
+      .trim()
+      .withMessage("Song title must be 1-200 characters"),
+    body("artist")
+      .isLength({ min: 1, max: 200 })
+      .trim()
+      .withMessage("Artist name must be 1-200 characters"),
+    body("album")
+      .optional()
+      .isLength({ max: 200 })
+      .trim()
+      .withMessage("Album name must be less than 200 characters"),
+    body("duration")
+      .isInt({ min: 1 })
+      .withMessage("Duration must be a positive integer"),
+    body("spotifyId")
+      .optional()
+      .isString()
+      .withMessage("Spotify ID must be a string"),
+    body("youtubeId")
+      .optional()
+      .isString()
+      .withMessage("YouTube ID must be a string"),
+    validateRequest,
   ],
   addSong
 );
@@ -196,20 +227,25 @@ router.post('/',
  *     { "songId": "song_id_3", "order": 2 }
  *   ]
  * }
- * 
+ *
  * // Response:
  * {
  *   "success": true,
  *   "message": "Songs reordered successfully"
  * }
  */
-router.put('/reorder', 
+router.put(
+  "/reorder",
   [
-    body('playlistId').isMongoId().withMessage('Valid playlist ID is required'),
-    body('songOrders').isArray().withMessage('Song orders must be an array'),
-    body('songOrders.*.songId').isMongoId().withMessage('Each song ID must be valid'),
-    body('songOrders.*.order').isInt({ min: 0 }).withMessage('Order must be a non-negative integer'),
-    validateRequest
+    body("playlistId").isMongoId().withMessage("Valid playlist ID is required"),
+    body("songOrders").isArray().withMessage("Song orders must be an array"),
+    body("songOrders.*.songId")
+      .isMongoId()
+      .withMessage("Each song ID must be valid"),
+    body("songOrders.*.order")
+      .isInt({ min: 0 })
+      .withMessage("Order must be a non-negative integer"),
+    validateRequest,
   ],
   reorderSongs
 );
@@ -228,18 +264,21 @@ router.put('/reorder',
  * @returns {Object} 500 - Server error
  * @example
  * // Request: DELETE /api/songs/song_id_here?playlistId=playlist_id_here
- * 
+ *
  * // Response:
  * {
  *   "success": true,
  *   "message": "Song removed successfully"
  * }
  */
-router.delete('/:id', 
+router.delete(
+  "/:id",
   [
-    param('id').isMongoId().withMessage('Invalid song ID'),
-    query('playlistId').isMongoId().withMessage('Valid playlist ID is required'),
-    validateRequest
+    param("id").isMongoId().withMessage("Invalid song ID"),
+    query("playlistId")
+      .isMongoId()
+      .withMessage("Valid playlist ID is required"),
+    validateRequest,
   ],
   removeSong
 );

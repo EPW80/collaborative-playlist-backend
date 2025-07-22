@@ -140,13 +140,22 @@ exports.addSong = asyncHandler(async (req, res, next) => {
   await cacheService.invalidate(cacheService.keys.playlistSongs(playlistId));
   await cacheService.invalidate(cacheService.keys.playlist(playlistId));
 
-  // Notify clients about the new song
+  // Notify clients about the new song with enhanced real-time features
   const io = req.app.get("io");
+  const realtimeService = req.app.get("realtimeService");
+
   if (io) {
     io.to(`playlist-${playlistId}`).emit("song-added", {
       playlistId,
       song: populatedSong,
+      addedBy: req.userId,
+      timestamp: new Date(),
     });
+  }
+
+  // Send notification through real-time service
+  if (realtimeService) {
+    realtimeService.notifySongAdded(playlistId, populatedSong, req.userId);
   }
 
   console.log(
@@ -207,13 +216,31 @@ exports.removeSong = asyncHandler(async (req, res, next) => {
   playlist.updatedAt = Date.now();
   await playlist.save();
 
-  // Notify clients about the removed song
+  // Invalidate relevant caches
+  await cacheService.invalidate(cacheService.keys.playlistSongs(playlistId));
+  await cacheService.invalidate(cacheService.keys.playlist(playlistId));
+  await cacheService.invalidate(cacheService.keys.song(songId));
+
+  // Notify clients about the removed song with enhanced real-time features
   const io = req.app.get("io");
+  const realtimeService = req.app.get("realtimeService");
+
   if (io) {
     io.to(`playlist-${playlistId}`).emit("song-removed", {
       playlistId,
       songId,
+      removedBy: req.userId,
+      songInfo: {
+        title: song.title,
+        artist: song.artist,
+      },
+      timestamp: new Date(),
     });
+  }
+
+  // Send notification through real-time service
+  if (realtimeService) {
+    realtimeService.notifySongRemoved(playlistId, songId, req.userId);
   }
 
   console.log(`✅ Song removed from playlist: ${song.title} by ${song.artist}`);

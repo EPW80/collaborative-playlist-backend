@@ -5,14 +5,18 @@
  * @description Command-line utility for managing database indexes
  */
 
-const mongoose = require('mongoose');
-const { createIndexes, getIndexInfo, recreateIndexes } = require('./src/utils/indexMigration');
-const config = require('./src/config/index');
+const mongoose = require("mongoose");
+const {
+  createIndexes,
+  getIndexInfo,
+  recreateIndexes,
+} = require("./src/utils/indexMigration");
+const config = require("./src/config/index");
 
 const commands = {
   create: createIndexes,
   info: getIndexInfo,
-  recreate: recreateIndexes
+  recreate: recreateIndexes,
 };
 
 async function main() {
@@ -50,24 +54,23 @@ Examples:
 
     const result = await commands[command]();
 
-    if (command === 'info') {
-      console.log('\n📊 Current Database Indexes:');
-      console.log('================================');
-      
+    if (command === "info") {
+      console.log("\n📊 Current Database Indexes:");
+      console.log("================================");
+
       Object.entries(result).forEach(([collection, indexes]) => {
         console.log(`\n${collection.toUpperCase()}:`);
         Object.entries(indexes).forEach(([name, index]) => {
-          const keys = Object.keys(index.key || {}).join(', ');
+          const keys = Object.keys(index.key || {}).join(", ");
           console.log(`  • ${name}: {${keys}}`);
         });
       });
     }
 
-    console.log('\n✅ Operation completed successfully');
+    console.log("\n✅ Operation completed successfully");
     process.exit(0);
-
   } catch (error) {
-    console.error('\n❌ Error:', error.message);
+    console.error("\n❌ Error:", error.message);
     process.exit(1);
   } finally {
     if (mongoose.connection.readyState === 1) {
@@ -77,8 +80,8 @@ Examples:
 }
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('❌ Unhandled Promise Rejection:', err.message);
+process.on("unhandledRejection", (err) => {
+  console.error("❌ Unhandled Promise Rejection:", err.message);
   process.exit(1);
 });
 
