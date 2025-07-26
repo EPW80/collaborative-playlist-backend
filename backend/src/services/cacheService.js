@@ -13,7 +13,8 @@ class CacheService {
     this.client = null;
     this.isConnected = false;
     this.retryAttempts = 0;
-    this.maxRetries = 5;
+    this.maxRetries = 10; // Reduced max retries
+    this.isRedisOptional = process.env.REDIS_OPTIONAL === 'true' || process.env.NODE_ENV === 'development';
 
     // Performance metrics
     this.metrics = {
@@ -71,11 +72,23 @@ class CacheService {
    */
   async connect() {
     try {
+      // Skip Redis connection if disabled
+      if (!config.redis?.enabled || this.isRedisOptional) {
+        console.log("⚠️  Redis disabled - running without cache");
+        return;
+      }
+
       this.client = redis.createClient({
         socket: {
           host: config.redis?.host || "localhost",
           port: config.redis?.port || 6379,
-          reconnectStrategy: (retries) => Math.min(retries * 50, 500),
+          reconnectStrategy: (retries) => {
+            if (retries >= this.maxRetries) {
+              console.log(`❌ Redis max retries (${this.maxRetries}) reached. Disabling Redis.`);
+              return false; // Stop reconnecting
+            }
+            return Math.min(retries * 50, 500);
+          },
         },
         password: config.redis?.password,
         database: config.redis?.db || 0,
@@ -95,6 +108,12 @@ class CacheService {
         console.error("❌ Redis connection error:", err.message);
         this.isConnected = false;
         this.metrics.errors++;
+        
+        // If too many errors, disable Redis
+        if (this.retryAttempts >= this.maxRetries) {
+          console.log("🔄 Disabling Redis due to persistent connection failures");
+          this.client = null;
+        }
       });
 
       this.client.on("end", () => {
@@ -104,7 +123,7 @@ class CacheService {
 
       this.client.on("reconnecting", () => {
         this.retryAttempts++;
-        console.log(`🔄 Redis reconnecting... (attempt ${this.retryAttempts})`);
+        console.log(`🔄 Redis reconnecting... (attempt ${this.retryAttempts}/${this.maxRetries})`);
       });
 
       // Connect to Redis
@@ -112,9 +131,12 @@ class CacheService {
 
       // Test connection
       await this.client.ping();
+      console.log("✅ Redis connection test successful");
     } catch (error) {
       console.error("💥 Failed to connect to Redis:", error.message);
+      console.log("🔄 App will continue without caching");
       this.isConnected = false;
+      this.client = null;
       // Don't throw error - app should work without cache
     }
   }
