@@ -58,3 +58,6 @@ coverage/
 # Temporary files
 package-lock.json
 yarn.lock
+setup-redis.sh
+/redis-monitor.sh
+redis-monitor.sh
