@@ -42,8 +42,8 @@ module.exports = (app) => {
           playlists: "/api/playlists",
           search: "/api/search",
           rbac: "/api/rbac",
-          suggestions: "/api/suggestions"
-        }
+          suggestions: "/api/suggestions",
+        },
       },
     });
   });
