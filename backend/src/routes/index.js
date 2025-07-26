@@ -25,6 +25,29 @@ module.exports = (app) => {
   app.use("/api/rbac", rbacRoutes);
   app.use("/api/suggestions", suggestionsRoutes);
 
+  // Root endpoint for health checks and deployment services
+  app.get("/", (req, res) => {
+    res.json({
+      success: true,
+      message: "Collaborative Playlist Manager API",
+      data: {
+        status: "OK",
+        timestamp: new Date().toISOString(),
+        version: require("../../package.json").version,
+        environment: process.env.NODE_ENV || "development",
+        endpoints: {
+          health: "/health",
+          api: "/api",
+          auth: "/api/auth",
+          playlists: "/api/playlists",
+          search: "/api/search",
+          rbac: "/api/rbac",
+          suggestions: "/api/suggestions"
+        }
+      },
+    });
+  });
+
   // Health check endpoint
   app.get("/health", (req, res) => {
     res.json({
