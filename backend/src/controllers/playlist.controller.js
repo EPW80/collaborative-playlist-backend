@@ -2,6 +2,7 @@ const Playlist = require("../models/Playlist");
 const User = require("../models/User");
 const { AppError, asyncHandler } = require("../middleware/errorHandler");
 const cacheService = require("../services/cacheService");
+const rbacService = require("../services/rbacService");
 
 // Get all playlists
 exports.getPlaylists = asyncHandler(async (req, res, next) => {
@@ -86,86 +87,51 @@ exports.createPlaylist = asyncHandler(async (req, res, next) => {
 // Get a single playlist by ID
 exports.getPlaylistById = asyncHandler(async (req, res, next) => {
   const playlistId = req.params.id;
-  const cacheKey = cacheService.keys.playlist(playlistId);
+  const userId = req.userId;
 
-  // Try cache first
-  const cachedPlaylist = await cacheService.get(cacheKey);
-  if (cachedPlaylist) {
-    // Still need to check access control even with cached data
-    const isCreator = cachedPlaylist.creator._id.toString() === req.userId;
-    const isCollaborator = cachedPlaylist.collaborators.some(
-      (collab) => collab.user._id.toString() === req.userId
-    );
-
-    if (!cachedPlaylist.isPublic && !isCreator && !isCollaborator) {
-      return next(new AppError("Access denied: This playlist is private", 403));
-    }
-
-    return res.json({
-      success: true,
-      data: { playlist: cachedPlaylist },
-      cached: true,
-    });
-  }
-
-  const playlist = await Playlist.findById(playlistId)
-    .populate("creator", "username")
-    .populate("collaborators.user", "username")
-    .populate({
-      path: "songs",
-      populate: {
-        path: "addedBy",
-        select: "username",
-      },
-      options: { sort: { order: 1, addedAt: 1 } },
-    });
-
-  if (!playlist) {
-    return next(new AppError("Playlist not found", 404));
-  }
-
-  // Check if user has access to this playlist
-  const isCreator = playlist.creator._id.toString() === req.userId;
-  const isCollaborator = playlist.collaborators.some(
-    (collab) => collab.user._id.toString() === req.userId
+  // Use RBAC service for access validation
+  const { playlist, userRole, permissions } = await rbacService.validateAccess(
+    userId,
+    playlistId
   );
 
-  if (!playlist.isPublic && !isCreator && !isCollaborator) {
-    return next(new AppError("Access denied: This playlist is private", 403));
-  }
+  // Include RBAC information in response
+  const playlistData = playlist.toObject();
+  playlistData.userAccess = {
+    role: userRole,
+    permissions,
+    canManage: rbacService.hasPermission(userId, playlist, "canManageCollaborators"),
+  };
 
-  // Cache the playlist for 10 minutes
-  await cacheService.set(cacheKey, playlist, 600);
+  // Cache the playlist data
+  const cacheKey = cacheService.keys.playlist(playlistId);
+  await cacheService.set(cacheKey, playlistData, 300); // 5 minutes
 
   res.json({
     success: true,
-    data: { playlist },
+    data: { playlist: playlistData },
   });
 });
 
 // Update a playlist
 exports.updatePlaylist = asyncHandler(async (req, res, next) => {
-  const { name, description, isPublic, collaborators } = req.body;
+  const { name, description, isPublic } = req.body;
+  const playlistId = req.params.id;
+  const userId = req.userId;
 
-  const playlist = await Playlist.findById(req.params.id);
-
-  if (!playlist) {
-    return next(new AppError("Playlist not found", 404));
-  }
-
-  // Verify ownership
-  if (playlist.creator.toString() !== req.userId) {
-    return next(
-      new AppError("Access denied: You can only update your own playlists", 403)
-    );
-  }
+  // Use RBAC to validate permissions for managing settings
+  const playlist = await rbacService.validatePermission(
+    userId,
+    playlistId,
+    "canManageSettings"
+  );
 
   if (name && name.trim() === "") {
     return next(new AppError("Playlist name cannot be empty", 400));
   }
 
   const updatedPlaylist = await Playlist.findByIdAndUpdate(
-    req.params.id,
+    playlistId,
     {
       name: name ? name.trim() : playlist.name,
       description:
@@ -201,25 +167,22 @@ exports.updatePlaylist = asyncHandler(async (req, res, next) => {
 
 // Delete a playlist
 exports.deletePlaylist = asyncHandler(async (req, res, next) => {
-  const playlist = await Playlist.findById(req.params.id);
+  const playlistId = req.params.id;
+  const userId = req.userId;
 
-  if (!playlist) {
-    return next(new AppError("Playlist not found", 404));
-  }
-
-  // Verify ownership
-  if (playlist.creator.toString() !== req.userId) {
-    return next(
-      new AppError("Access denied: You can only delete your own playlists", 403)
-    );
-  }
+  // Use RBAC to validate delete permissions (only owner can delete)
+  const playlist = await rbacService.validatePermission(
+    userId,
+    playlistId,
+    "canDelete"
+  );
 
   // Delete all songs in the playlist first
   const Song = require("../models/Song");
-  await Song.deleteMany({ playlist: req.params.id });
+  await Song.deleteMany({ playlist: playlistId });
 
   // Delete the playlist
-  await Playlist.findByIdAndDelete(req.params.id);
+  await Playlist.findByIdAndDelete(playlistId);
 
   // Notify clients about the deletion
   const io = req.app.get("io");

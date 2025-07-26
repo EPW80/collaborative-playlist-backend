@@ -25,12 +25,23 @@ const playlistSchema = new mongoose.Schema(
         },
         role: {
           type: String,
-          enum: ["admin", "editor", "viewer"],
-          default: "editor",
+          enum: ["viewer", "contributor", "editor", "admin"],
+          default: "contributor",
         },
         joinedAt: {
           type: Date,
           default: Date.now,
+        },
+        invitedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        permissions: {
+          canView: { type: Boolean, default: true },
+          canSuggest: { type: Boolean, default: true },
+          canEdit: { type: Boolean, default: false },
+          canManageCollaborators: { type: Boolean, default: false },
+          canDelete: { type: Boolean, default: false },
         },
       },
     ],
@@ -63,6 +74,42 @@ const playlistSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // Pending song suggestions system for contributors
+    pendingSuggestions: [
+      {
+        song: {
+          title: { type: String, required: true },
+          artist: { type: String, required: true },
+          album: String,
+          duration: Number,
+          spotifyId: String,
+          youtubeId: String,
+          geniusId: String,
+          previewUrl: String,
+          imageUrl: String,
+        },
+        suggestedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        suggestedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        status: {
+          type: String,
+          enum: ["pending", "approved", "rejected"],
+          default: "pending",
+        },
+        reviewedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        reviewedAt: Date,
+        reviewNote: String,
+      },
+    ],
     // Real-time collaboration features
     nowPlaying: {
       songId: {

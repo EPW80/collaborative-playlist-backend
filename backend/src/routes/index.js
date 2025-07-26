@@ -10,6 +10,8 @@ const searchRoutes = require("./search");
 const cacheRoutes = require("./cache");
 const lyricsRoutes = require("./lyrics");
 const realtimeRoutes = require("./realtime");
+const rbacRoutes = require("./rbac");
+const suggestionsRoutes = require("./suggestions");
 
 module.exports = (app) => {
   // API routes
@@ -20,6 +22,8 @@ module.exports = (app) => {
   app.use("/api/cache", cacheRoutes);
   app.use("/api/lyrics", lyricsRoutes);
   app.use("/api/realtime", realtimeRoutes);
+  app.use("/api/rbac", rbacRoutes);
+  app.use("/api/suggestions", suggestionsRoutes);
 
   // Health check endpoint
   app.get("/health", (req, res) => {
@@ -100,6 +104,33 @@ module.exports = (app) => {
               "Get playlist activity feed",
             "POST /api/realtime/presence": "Update user presence/cursor",
             "GET /api/realtime/stats": "Get real-time system statistics",
+          },
+          rbac: {
+            "GET /api/rbac/permissions/:playlistId":
+              "Get user permissions for playlist",
+            "POST /api/rbac/collaborators/:playlistId":
+              "Add collaborator with role",
+            "PUT /api/rbac/collaborators/:playlistId/:userId":
+              "Update collaborator role",
+            "DELETE /api/rbac/collaborators/:playlistId/:userId":
+              "Remove collaborator",
+            "GET /api/rbac/collaborators/:playlistId": "Get all collaborators",
+            "GET /api/rbac/roles": "Get available roles and permissions",
+            "POST /api/rbac/leave/:playlistId": "Leave playlist",
+            "POST /api/rbac/transfer-ownership/:playlistId":
+              "Transfer ownership",
+          },
+          suggestions: {
+            "POST /api/suggestions/:playlistId": "Submit song suggestion",
+            "GET /api/suggestions/:playlistId": "Get pending suggestions",
+            "POST /api/suggestions/:playlistId/:suggestionId/approve":
+              "Approve suggestion",
+            "POST /api/suggestions/:playlistId/:suggestionId/reject":
+              "Reject suggestion",
+            "DELETE /api/suggestions/:playlistId/:suggestionId":
+              "Delete suggestion",
+            "GET /api/suggestions/my-suggestions/:playlistId":
+              "Get my suggestions",
           },
         },
       },

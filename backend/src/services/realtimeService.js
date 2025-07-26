@@ -514,18 +514,11 @@ class RealtimeService {
    * Helper methods
    */
   async validatePlaylistAccess(userId, playlistId) {
-    // Implement playlist access validation logic
+    // Use RBAC service for more comprehensive access validation
     try {
-      const Playlist = require("../models/Playlist");
-      const playlist = await Playlist.findById(playlistId);
-
-      if (!playlist) return false;
-
-      return (
-        playlist.creator.toString() === userId ||
-        playlist.collaborators.includes(userId) ||
-        playlist.isPublic
-      );
+      const rbacService = require("./rbacService");
+      const { playlist } = await rbacService.validateAccess(userId, playlistId);
+      return !!playlist;
     } catch (error) {
       console.error("Error validating playlist access:", error);
       return false;
