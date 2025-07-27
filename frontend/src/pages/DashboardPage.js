@@ -13,11 +13,126 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Switch,
+  FormControlLabel,
+  Avatar,
+  Fade,
+  Grow,
+  Chip,
+  Skeleton,
+  Paper,
 } from "@mui/material";
-import { Add as AddIcon, AccountCircle, Logout } from "@mui/icons-material";
+import {
+  Add as AddIcon,
+  AccountCircle,
+  Logout,
+  Security,
+  AccountTree,
+  Speed,
+  Brightness4,
+  Brightness7,
+  QueueMusic,
+  People,
+  Lock,
+  Public,
+} from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { playlistAPI } from "../services/api";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+
+// Create blockchain-inspired theme
+const createBlockchainTheme = (darkMode) =>
+  createTheme({
+    palette: {
+      mode: darkMode ? "dark" : "light",
+      primary: {
+        main: darkMode ? "#00e676" : "#1976d2",
+        dark: darkMode ? "#00c853" : "#1565c0",
+        light: darkMode ? "#66ffa6" : "#42a5f5",
+      },
+      secondary: {
+        main: darkMode ? "#1976d2" : "#00e676",
+        dark: darkMode ? "#1565c0" : "#00c853",
+        light: darkMode ? "#42a5f5" : "#66ffa6",
+      },
+      background: {
+        default: darkMode ? "#121212" : "#f5f5f5",
+        paper: darkMode ? "#1e1e1e" : "#ffffff",
+      },
+      text: {
+        primary: darkMode ? "#ffffff" : "#333333",
+        secondary: darkMode ? "#b0b0b0" : "#666666",
+      },
+    },
+    typography: {
+      h4: {
+        fontWeight: 700,
+        background: darkMode
+          ? "linear-gradient(45deg, #00e676, #1976d2)"
+          : "linear-gradient(45deg, #1976d2, #00e676)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+      },
+      h6: {
+        fontWeight: 600,
+      },
+    },
+    components: {
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+            textTransform: "none",
+            fontWeight: 600,
+            background: darkMode
+              ? "linear-gradient(45deg, #00e676, #1976d2)"
+              : "linear-gradient(45deg, #1976d2, #00e676)",
+            color: "white",
+            "&:hover": {
+              background: darkMode
+                ? "linear-gradient(45deg, #00c853, #1565c0)"
+                : "linear-gradient(45deg, #1565c0, #00c853)",
+              transform: "scale(1.02)",
+            },
+            transition: "all 0.3s ease",
+          },
+        },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            borderRadius: 16,
+            transition: "all 0.3s ease",
+            background: darkMode
+              ? "linear-gradient(135deg, #1e1e1e, #2a2a2a)"
+              : "linear-gradient(135deg, #ffffff, #f8f9fa)",
+            border: darkMode
+              ? "1px solid rgba(0, 230, 118, 0.3)"
+              : "1px solid rgba(25, 118, 210, 0.3)",
+            "&:hover": {
+              transform: "translateY(-8px)",
+              boxShadow: darkMode
+                ? "0 12px 24px rgba(0, 230, 118, 0.3)"
+                : "0 12px 24px rgba(25, 118, 210, 0.3)",
+            },
+          },
+        },
+      },
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            background: darkMode
+              ? "linear-gradient(135deg, #121212, #1e1e1e)"
+              : "linear-gradient(135deg, #1976d2, #00e676)",
+            borderBottom: darkMode
+              ? "1px solid rgba(0, 230, 118, 0.3)"
+              : "1px solid rgba(255, 255, 255, 0.2)",
+          },
+        },
+      },
+    },
+  });
 
 function DashboardPage() {
   const navigate = useNavigate();
@@ -25,6 +140,9 @@ function DashboardPage() {
   const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
+
+  const theme = createBlockchainTheme(darkMode);
 
   // Load playlists
   useEffect(() => {
@@ -65,126 +183,404 @@ function DashboardPage() {
   };
 
   return (
-    <>
-      {/* App Bar */}
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Collaborative Playlist Manager
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography variant="body2">Welcome, {user?.username}!</Typography>
-            <IconButton
-              size="large"
-              edge="end"
-              aria-label="account menu"
-              aria-controls="account-menu"
-              aria-haspopup="true"
-              onClick={handleMenuOpen}
-              color="inherit"
-            >
-              <AccountCircle />
-            </IconButton>
-            <Menu
-              id="account-menu"
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={handleMenuClose}
-            >
-              <MenuItem onClick={handleLogout}>
-                <Logout fontSize="small" sx={{ mr: 1 }} />
-                Logout
-              </MenuItem>
-            </Menu>
-          </Box>
-        </Toolbar>
-      </AppBar>
-
-      {/* Main Content */}
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <ThemeProvider theme={theme}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          background:
+            theme.palette.mode === "dark"
+              ? "linear-gradient(135deg, #121212 0%, #1e1e1e 50%, #2a2a2a 100%)"
+              : "linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 50%, #ffffff 100%)",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Animated Background Elements */}
         <Box
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
+            position: "absolute",
+            top: "10%",
+            left: "5%",
+            width: 80,
+            height: 80,
+            background: "linear-gradient(45deg, #00e676, #1976d2)",
+            borderRadius: "50%",
+            opacity: 0.1,
+            animation: "float 6s ease-in-out infinite",
+            "@keyframes float": {
+              "0%, 100%": { transform: "translateY(0px)" },
+              "50%": { transform: "translateY(-20px)" },
+            },
           }}
-        >
-          <Typography variant="h4" component="h1">
-            My Playlists
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCreatePlaylist}
-          >
-            Create Playlist
-          </Button>
-        </Box>
+        />
+        <Box
+          sx={{
+            position: "absolute",
+            top: "20%",
+            right: "10%",
+            width: 60,
+            height: 60,
+            background: "linear-gradient(45deg, #1976d2, #00e676)",
+            borderRadius: "20%",
+            opacity: 0.1,
+            animation: "float 8s ease-in-out infinite reverse",
+          }}
+        />
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: "20%",
+            left: "10%",
+            width: 100,
+            height: 40,
+            background: "linear-gradient(45deg, #00e676, #1976d2)",
+            borderRadius: "10px",
+            opacity: 0.1,
+            animation: "float 10s ease-in-out infinite",
+          }}
+        />
 
-        {loading ? (
-          <Typography>Loading playlists...</Typography>
-        ) : playlists.length === 0 ? (
-          <Box textAlign="center" py={4}>
-            <Typography variant="h6" color="textSecondary" gutterBottom>
-              No playlists yet
+        {/* App Bar */}
+        <AppBar position="static" elevation={0}>
+          <Toolbar>
+            <Box sx={{ display: "flex", alignItems: "center", mr: 2 }}>
+              <Security sx={{ mr: 1, color: "#00e676" }} />
+              <Typography
+                variant="h6"
+                component="div"
+                sx={{
+                  fontWeight: 700,
+                  background: "linear-gradient(45deg, #00e676, #ffffff)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
+                BlockBeats
+              </Typography>
+            </Box>
+            <Typography variant="body2" sx={{ flexGrow: 1, opacity: 0.8 }}>
+              Decentralized Music Collaboration
             </Typography>
-            <Typography variant="body2" color="textSecondary" paragraph>
-              Create your first collaborative playlist to get started!
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleCreatePlaylist}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={darkMode}
+                    onChange={(e) => setDarkMode(e.target.checked)}
+                    icon={<Brightness7 />}
+                    checkedIcon={<Brightness4 />}
+                  />
+                }
+                label=""
+              />
+              <Chip
+                icon={<AccountTree />}
+                label={`Chain User: ${user?.username}`}
+                variant="outlined"
+                sx={{
+                  color: "#00e676",
+                  borderColor: "#00e676",
+                  "& .MuiChip-icon": { color: "#00e676" },
+                }}
+              />
+              <IconButton
+                size="large"
+                edge="end"
+                aria-label="account menu"
+                aria-controls="account-menu"
+                aria-haspopup="true"
+                onClick={handleMenuOpen}
+                sx={{
+                  color: "#00e676",
+                  "&:hover": {
+                    background: "rgba(0, 230, 118, 0.1)",
+                  },
+                }}
+              >
+                <AccountCircle />
+              </IconButton>
+              <Menu
+                id="account-menu"
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+                PaperProps={{
+                  sx: {
+                    background:
+                      theme.palette.mode === "dark"
+                        ? "linear-gradient(135deg, #1e1e1e, #2a2a2a)"
+                        : "linear-gradient(135deg, #ffffff, #f8f9fa)",
+                    border: `1px solid ${
+                      theme.palette.mode === "dark"
+                        ? "rgba(0, 230, 118, 0.3)"
+                        : "rgba(25, 118, 210, 0.3)"
+                    }`,
+                  },
+                }}
+              >
+                <MenuItem onClick={handleLogout}>
+                  <Logout fontSize="small" sx={{ mr: 1, color: "#f44336" }} />
+                  Disconnect Wallet
+                </MenuItem>
+              </Menu>
+            </Box>
+          </Toolbar>
+        </AppBar>
+
+        {/* Main Content */}
+        <Container maxWidth="lg" sx={{ pt: 4, pb: 4 }}>
+          <Fade in timeout={1000}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 4,
+                p: 3,
+                borderRadius: 3,
+                background:
+                  theme.palette.mode === "dark"
+                    ? "rgba(30, 30, 30, 0.7)"
+                    : "rgba(255, 255, 255, 0.7)",
+                backdropFilter: "blur(10px)",
+                border: `1px solid ${
+                  theme.palette.mode === "dark"
+                    ? "rgba(0, 230, 118, 0.3)"
+                    : "rgba(25, 118, 210, 0.3)"
+                }`,
+              }}
             >
-              Create Your First Playlist
-            </Button>
-          </Box>
-        ) : (
-          <Grid container spacing={3}>
-            {playlists.map((playlist) => (
-              <Grid item xs={12} sm={6} md={4} key={playlist._id}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" component="div" gutterBottom>
-                      {playlist.name}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      paragraph
-                    >
-                      {playlist.description || "No description"}
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                      {playlist.songs?.length || 0} songs
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                      {playlist.collaborators?.length || 0} collaborators
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      display="block"
-                      color="text.secondary"
-                    >
-                      Created by: {playlist.creator?.username}
-                    </Typography>
-                  </CardContent>
-                  <CardActions>
-                    <Button
-                      size="small"
-                      onClick={() => handlePlaylistClick(playlist._id)}
-                    >
-                      Open
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        )}
-      </Container>
-    </>
+              <Box>
+                <Typography variant="h4" component="h1" gutterBottom>
+                  Music Chain Vault
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Your decentralized playlist collection
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<AddIcon />}
+                onClick={handleCreatePlaylist}
+                sx={{
+                  px: 3,
+                  py: 1.5,
+                  background: "linear-gradient(45deg, #00e676, #1976d2)",
+                  "&:hover": {
+                    background: "linear-gradient(45deg, #00c853, #1565c0)",
+                    transform: "scale(1.05)",
+                  },
+                }}
+              >
+                Mint Playlist
+              </Button>
+            </Box>
+          </Fade>
+
+          {loading ? (
+            <Grid container spacing={3}>
+              {[1, 2, 3, 4, 5, 6].map((item) => (
+                <Grid item xs={12} sm={6} md={4} key={item}>
+                  <Card>
+                    <CardContent>
+                      <Skeleton variant="text" width="80%" height={32} />
+                      <Skeleton variant="text" width="100%" height={20} />
+                      <Skeleton variant="text" width="60%" height={20} />
+                      <Box sx={{ mt: 2 }}>
+                        <Skeleton variant="text" width="40%" height={16} />
+                        <Skeleton variant="text" width="50%" height={16} />
+                      </Box>
+                    </CardContent>
+                    <CardActions>
+                      <Skeleton variant="rectangular" width={80} height={32} />
+                    </CardActions>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          ) : playlists.length === 0 ? (
+            <Fade in timeout={1500}>
+              <Paper
+                sx={{
+                  p: 6,
+                  textAlign: "center",
+                  background:
+                    theme.palette.mode === "dark"
+                      ? "linear-gradient(135deg, #1e1e1e, #2a2a2a)"
+                      : "linear-gradient(135deg, #ffffff, #f8f9fa)",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(0, 230, 118, 0.3)"
+                      : "rgba(25, 118, 210, 0.3)"
+                  }`,
+                  borderRadius: 3,
+                }}
+              >
+                <QueueMusic
+                  sx={{
+                    fontSize: 64,
+                    color: theme.palette.primary.main,
+                    mb: 2,
+                  }}
+                />
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+                  No Playlists in Chain
+                </Typography>
+                <Typography variant="body1" color="text.secondary" paragraph>
+                  Start your decentralized music journey by creating your first
+                  collaborative playlist!
+                </Typography>
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<AddIcon />}
+                  onClick={handleCreatePlaylist}
+                  sx={{
+                    mt: 2,
+                    px: 4,
+                    py: 1.5,
+                    background: "linear-gradient(45deg, #00e676, #1976d2)",
+                    "&:hover": {
+                      background: "linear-gradient(45deg, #00c853, #1565c0)",
+                      transform: "scale(1.05)",
+                    },
+                  }}
+                >
+                  Mint Your First Playlist
+                </Button>
+              </Paper>
+            </Fade>
+          ) : (
+            <Grid container spacing={3}>
+              {playlists.map((playlist, index) => (
+                <Grid item xs={12} sm={6} md={4} key={playlist._id}>
+                  <Grow in timeout={1000 + index * 200}>
+                    <Card>
+                      <CardContent>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mb: 2 }}
+                        >
+                          <Avatar
+                            sx={{
+                              background:
+                                "linear-gradient(45deg, #00e676, #1976d2)",
+                              mr: 2,
+                              width: 48,
+                              height: 48,
+                            }}
+                          >
+                            <QueueMusic />
+                          </Avatar>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography
+                              variant="h6"
+                              component="div"
+                              gutterBottom
+                            >
+                              {playlist.name}
+                            </Typography>
+                            <Chip
+                              icon={playlist.isPublic ? <Public /> : <Lock />}
+                              label={
+                                playlist.isPublic
+                                  ? "Public Chain"
+                                  : "Private Chain"
+                              }
+                              size="small"
+                              variant="outlined"
+                              sx={{
+                                color: playlist.isPublic
+                                  ? "#00e676"
+                                  : "#ff9800",
+                                borderColor: playlist.isPublic
+                                  ? "#00e676"
+                                  : "#ff9800",
+                                "& .MuiChip-icon": {
+                                  color: playlist.isPublic
+                                    ? "#00e676"
+                                    : "#ff9800",
+                                },
+                              }}
+                            />
+                          </Box>
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          paragraph
+                          sx={{ minHeight: 40 }}
+                        >
+                          {playlist.description || "No description available"}
+                        </Typography>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            gap: 1,
+                            flexWrap: "wrap",
+                            mb: 2,
+                          }}
+                        >
+                          <Chip
+                            icon={<QueueMusic />}
+                            label={`${playlist.songs?.length || 0} tracks`}
+                            size="small"
+                            variant="filled"
+                            sx={{
+                              background: "rgba(25, 118, 210, 0.1)",
+                              color: "#1976d2",
+                            }}
+                          />
+                          <Chip
+                            icon={<People />}
+                            label={`${
+                              playlist.collaborators?.length || 0
+                            } collaborators`}
+                            size="small"
+                            variant="filled"
+                            sx={{
+                              background: "rgba(0, 230, 118, 0.1)",
+                              color: "#00e676",
+                            }}
+                          />
+                        </Box>
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          color="text.secondary"
+                          sx={{ fontWeight: 500 }}
+                        >
+                          Chain Creator: {playlist.creator?.username}
+                        </Typography>
+                      </CardContent>
+                      <CardActions sx={{ p: 2, pt: 0 }}>
+                        <Button
+                          size="medium"
+                          onClick={() => handlePlaylistClick(playlist._id)}
+                          startIcon={<Speed />}
+                          sx={{
+                            background:
+                              "linear-gradient(45deg, #1976d2, #00e676)",
+                            color: "white",
+                            "&:hover": {
+                              background:
+                                "linear-gradient(45deg, #1565c0, #00c853)",
+                              transform: "scale(1.05)",
+                            },
+                          }}
+                        >
+                          Access Chain
+                        </Button>
+                      </CardActions>
+                    </Card>
+                  </Grow>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Container>
+      </Box>
+    </ThemeProvider>
   );
 }
 
