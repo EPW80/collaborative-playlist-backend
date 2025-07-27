@@ -137,13 +137,21 @@ exports.updatePlaylist = asyncHandler(async (req, res, next) => {
       description:
         description !== undefined ? description.trim() : playlist.description,
       isPublic: isPublic !== undefined ? isPublic : playlist.isPublic,
-      collaborators: collaborators || playlist.collaborators,
       updatedAt: Date.now(),
     },
     { new: true, runValidators: true }
   )
     .populate("creator", "username")
-    .populate("collaborators", "username");
+    .populate("collaborators.user", "username");
+
+  // Invalidate relevant caches
+  await cacheService.invalidate(cacheService.keys.playlist(playlistId));
+  await cacheService.invalidate(cacheService.keys.userPlaylists(userId));
+  
+  // If playlist was made public/private, invalidate public cache
+  if (isPublic !== undefined) {
+    await cacheService.invalidate("public:playlists:*");
+  }
 
   // Notify clients about the playlist update
   const io = req.app.get("io");
