@@ -2,52 +2,50 @@
 
 A full-stack real-time collaborative playlist manager application that allows users to create, share, and edit playlists together with comprehensive music data integration.
 
-## Features
+## 🎵 Features
 
-### Core Functionality
-- **User Authentication** - JWT-based secure authentication system
-- **Real-time Collaboration** - Live playlist editing using Socket.io
-- **Playlist Management** - Create, update, delete, and share playlists
-- **Song Management** - Add, remove, and reorder songs in playlists
-- **Role-Based Access Control** - Owner and collaborator permissions
+### Backend Features
+- **5-Tier RBAC System**: viewer → contributor → editor → admin → owner
+- **Real-time Collaboration**: Socket.io for live updates
+- **Comprehensive API**: Complete CRUD operations for playlists
+- **JWT Authentication**: Secure user authentication with bcryptjs
+- **Redis Caching**: Performance optimization with Redis Cloud
+- **API Integrations**: Spotify, Last.fm, and Genius APIs
+- **Production Ready**: Deployed on Render with optimized configurations
 
-### Music Integration (3 APIs)
-- **Spotify API** - Music search, track details, and streaming links
-- **Last.fm API** - Artist information, biographies, and music metadata
-- **Genius API** - Song lyrics, detailed song information, and artist data
+### Frontend Features (NEW)
+- **React Application**: Modern React with Material-UI
+- **Real-time Updates**: Socket.io client for live collaboration
+- **Responsive Design**: Mobile-first responsive interface
+- **Role-based UI**: Dynamic interface based on user permissions
+- **Authentication Flow**: Complete login/register with protected routes
 
-### Performance & Scalability
-- **Redis Caching** - High-performance caching layer (15x faster responses)
-- **Database Optimization** - MongoDB with performance indexes
-- **Rate Limiting** - API protection and abuse prevention
-- **Error Handling** - Comprehensive error management and logging
-
-## Project Structure
+## 🏗️ Project Structure
 
 ```
-backend/
-├── src/
-│   ├── controllers/           - Business logic (MVC pattern)
-│   │   ├── auth.controller.js          - Authentication logic
-│   │   ├── playlist.controller.js      - Playlist management
-│   │   ├── song.controller.js          - Song management
-│   │   ├── genius.controller.js        - Genius API endpoints
-│   │   └── index.js                   - Controller exports
-│   ├── models/               - Database models (Mongoose)
-│   │   ├── User.js                    - User schema with authentication
-│   │   ├── Playlist.js                - Playlist schema with collaborators
-│   │   └── Song.js                    - Song schema with metadata
-│   ├── routes/               - API routes (Express Router)
-│   │   ├── auth.js                    - Authentication endpoints
-│   │   ├── playlists.js               - Playlist CRUD operations
-│   │   ├── songs.js                   - Song management endpoints
-│   │   ├── search.js                  - Music search (Spotify/Last.fm)
-│   │   ├── lyrics.js                  - Genius API endpoints (NEW)
-│   │   ├── cache.js                   - Cache management endpoints
-│   │   └── index.js                   - Route configuration
-│   ├── services/             - External API integrations
-│   │   ├── spotifyService.js          - Spotify API client
-│   │   ├── lastfmService.js           - Last.fm API client
+collaborative-playlist-manager/
+├── backend/                   # Node.js/Express backend
+│   ├── controllers/           # API route controllers
+│   ├── middleware/           # Authentication & RBAC middleware
+│   ├── models/              # MongoDB schemas
+│   ├── routes/              # API routes
+│   ├── services/            # Business logic & RBAC service
+│   ├── config/              # Database & Redis configuration
+│   └── server.js            # Express server entry point
+├── frontend/                  # React frontend (NEW)
+│   ├── public/              # Static assets
+│   └── src/
+│       ├── components/      # Reusable React components
+│       │   ├── Auth/       # Authentication components
+│       │   ├── Playlist/   # Playlist-related components
+│       │   ├── Player/     # Audio player components
+│       │   └── RBAC/       # Role-based access components
+│       ├── pages/          # Page components
+│       ├── services/       # API & WebSocket services
+│       ├── context/        # React Context (Auth, etc.)
+│       └── hooks/          # Custom React hooks
+└── README.md
+```
 │   │   ├── geniusService.js           - Genius API client (NEW)
 │   │   └── cacheService.js            - Redis caching service (NEW)
 │   ├── middleware/           - Express middleware
