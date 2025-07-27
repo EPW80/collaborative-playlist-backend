@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Container,
   Paper,
@@ -8,23 +8,23 @@ import {
   Box,
   Link,
   Alert,
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function LoginPage() {
   const navigate = useNavigate();
   const { login, error, isLoading, clearError } = useAuth();
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     if (error) clearError();
   };
@@ -33,7 +33,7 @@ function LoginPage() {
     e.preventDefault();
     const result = await login(formData);
     if (result.success) {
-      navigate('/dashboard');
+      navigate("/dashboard");
     }
   };
 
@@ -42,12 +42,12 @@ function LoginPage() {
       <Box
         sx={{
           marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
-        <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
+        <Paper elevation={3} sx={{ padding: 4, width: "100%" }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
             Collaborative Playlist Manager
           </Typography>
@@ -95,13 +95,13 @@ function LoginPage() {
               sx={{ mt: 3, mb: 2 }}
               disabled={isLoading}
             >
-              {isLoading ? 'Signing In...' : 'Sign In'}
+              {isLoading ? "Signing In..." : "Sign In"}
             </Button>
             <Box textAlign="center">
               <Link
                 component="button"
                 variant="body2"
-                onClick={() => navigate('/register')}
+                onClick={() => navigate("/register")}
                 type="button"
               >
                 Don't have an account? Sign Up

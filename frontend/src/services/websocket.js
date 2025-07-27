@@ -1,4 +1,4 @@
-import { io } from 'socket.io-client';
+import { io } from "socket.io-client";
 
 class SocketService {
   constructor() {
@@ -11,27 +11,29 @@ class SocketService {
       return;
     }
 
-    const serverUrl = process.env.REACT_APP_API_URL || 'https://collaborative-playlist-backend.onrender.com';
-    
+    const serverUrl =
+      process.env.REACT_APP_API_URL ||
+      "https://collaborative-playlist-backend.onrender.com";
+
     this.socket = io(serverUrl, {
       auth: {
-        token: token
+        token: token,
       },
-      transports: ['websocket', 'polling']
+      transports: ["websocket", "polling"],
     });
 
-    this.socket.on('connect', () => {
-      console.log('Connected to server');
+    this.socket.on("connect", () => {
+      console.log("Connected to server");
       this.connected = true;
     });
 
-    this.socket.on('disconnect', () => {
-      console.log('Disconnected from server');
+    this.socket.on("disconnect", () => {
+      console.log("Disconnected from server");
       this.connected = false;
     });
 
-    this.socket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
+    this.socket.on("connect_error", (error) => {
+      console.error("Connection error:", error);
     });
   }
 
@@ -46,97 +48,97 @@ class SocketService {
   // Playlist collaboration events
   joinPlaylist(playlistId) {
     if (this.socket && this.connected) {
-      this.socket.emit('join-playlist', playlistId);
+      this.socket.emit("join-playlist", playlistId);
     }
   }
 
   leavePlaylist(playlistId) {
     if (this.socket && this.connected) {
-      this.socket.emit('leave-playlist', playlistId);
+      this.socket.emit("leave-playlist", playlistId);
     }
   }
 
   // Real-time playlist updates
   onPlaylistUpdate(callback) {
     if (this.socket) {
-      this.socket.on('playlist-updated', callback);
+      this.socket.on("playlist-updated", callback);
     }
   }
 
   onSongAdded(callback) {
     if (this.socket) {
-      this.socket.on('song-added', callback);
+      this.socket.on("song-added", callback);
     }
   }
 
   onSongRemoved(callback) {
     if (this.socket) {
-      this.socket.on('song-removed', callback);
+      this.socket.on("song-removed", callback);
     }
   }
 
   onCollaboratorAdded(callback) {
     if (this.socket) {
-      this.socket.on('collaborator-added', callback);
+      this.socket.on("collaborator-added", callback);
     }
   }
 
   onCollaboratorRemoved(callback) {
     if (this.socket) {
-      this.socket.on('collaborator-removed', callback);
+      this.socket.on("collaborator-removed", callback);
     }
   }
 
   // Suggestion events
   onSuggestionReceived(callback) {
     if (this.socket) {
-      this.socket.on('suggestion-received', callback);
+      this.socket.on("suggestion-received", callback);
     }
   }
 
   onSuggestionApproved(callback) {
     if (this.socket) {
-      this.socket.on('suggestion-approved', callback);
+      this.socket.on("suggestion-approved", callback);
     }
   }
 
   onSuggestionRejected(callback) {
     if (this.socket) {
-      this.socket.on('suggestion-rejected', callback);
+      this.socket.on("suggestion-rejected", callback);
     }
   }
 
   // Active users
   onUserJoined(callback) {
     if (this.socket) {
-      this.socket.on('user-joined', callback);
+      this.socket.on("user-joined", callback);
     }
   }
 
   onUserLeft(callback) {
     if (this.socket) {
-      this.socket.on('user-left', callback);
+      this.socket.on("user-left", callback);
     }
   }
 
   onActiveUsersUpdate(callback) {
     if (this.socket) {
-      this.socket.on('active-users-update', callback);
+      this.socket.on("active-users-update", callback);
     }
   }
 
   // Player synchronization
   onPlayerSync(callback) {
     if (this.socket) {
-      this.socket.on('player-sync', callback);
+      this.socket.on("player-sync", callback);
     }
   }
 
   syncPlayer(playlistId, playerState) {
     if (this.socket && this.connected) {
-      this.socket.emit('sync-player', {
+      this.socket.emit("sync-player", {
         playlistId,
-        playerState
+        playerState,
       });
     }
   }

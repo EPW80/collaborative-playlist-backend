@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -13,15 +13,11 @@ import {
   IconButton,
   Menu,
   MenuItem,
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  AccountCircle,
-  Logout,
-} from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { playlistAPI } from '../services/api';
+} from "@mui/material";
+import { Add as AddIcon, AccountCircle, Logout } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { playlistAPI } from "../services/api";
 
 function DashboardPage() {
   const navigate = useNavigate();
@@ -37,7 +33,7 @@ function DashboardPage() {
         const response = await playlistAPI.getAll();
         setPlaylists(response.data.data.playlists || []);
       } catch (error) {
-        console.error('Error loading playlists:', error);
+        console.error("Error loading playlists:", error);
       } finally {
         setLoading(false);
       }
@@ -61,7 +57,7 @@ function DashboardPage() {
 
   const handleCreatePlaylist = () => {
     // Navigate to create playlist or open modal
-    console.log('Create playlist functionality coming soon!');
+    console.log("Create playlist functionality coming soon!");
   };
 
   const handlePlaylistClick = (playlistId) => {
@@ -76,10 +72,8 @@ function DashboardPage() {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Collaborative Playlist Manager
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2">
-              Welcome, {user?.username}!
-            </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography variant="body2">Welcome, {user?.username}!</Typography>
             <IconButton
               size="large"
               edge="end"
@@ -108,7 +102,14 @@ function DashboardPage() {
 
       {/* Main Content */}
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Typography variant="h4" component="h1">
             My Playlists
           </Typography>
@@ -148,8 +149,12 @@ function DashboardPage() {
                     <Typography variant="h6" component="div" gutterBottom>
                       {playlist.name}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" paragraph>
-                      {playlist.description || 'No description'}
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      paragraph
+                    >
+                      {playlist.description || "No description"}
                     </Typography>
                     <Typography variant="caption" display="block">
                       {playlist.songs?.length || 0} songs
@@ -157,13 +162,17 @@ function DashboardPage() {
                     <Typography variant="caption" display="block">
                       {playlist.collaborators?.length || 0} collaborators
                     </Typography>
-                    <Typography variant="caption" display="block" color="text.secondary">
+                    <Typography
+                      variant="caption"
+                      display="block"
+                      color="text.secondary"
+                    >
                       Created by: {playlist.creator?.username}
                     </Typography>
                   </CardContent>
                   <CardActions>
-                    <Button 
-                      size="small" 
+                    <Button
+                      size="small"
                       onClick={() => handlePlaylistClick(playlist._id)}
                     >
                       Open

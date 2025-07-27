@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Container,
   Paper,
@@ -8,49 +8,49 @@ import {
   Box,
   Link,
   Alert,
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function RegisterPage() {
   const navigate = useNavigate();
   const { register, error, isLoading, clearError } = useAuth();
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   });
-  const [validationError, setValidationError] = useState('');
+  const [validationError, setValidationError] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     if (error) clearError();
-    if (validationError) setValidationError('');
+    if (validationError) setValidationError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate form
     if (formData.password !== formData.confirmPassword) {
-      setValidationError('Passwords do not match');
+      setValidationError("Passwords do not match");
       return;
     }
 
     if (formData.password.length < 6) {
-      setValidationError('Password must be at least 6 characters long');
+      setValidationError("Password must be at least 6 characters long");
       return;
     }
 
     const { confirmPassword, ...registerData } = formData;
     const result = await register(registerData);
     if (result.success) {
-      navigate('/dashboard');
+      navigate("/dashboard");
     }
   };
 
@@ -61,12 +61,12 @@ function RegisterPage() {
       <Box
         sx={{
           marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
-        <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
+        <Paper elevation={3} sx={{ padding: 4, width: "100%" }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
             Collaborative Playlist Manager
           </Typography>
@@ -139,13 +139,13 @@ function RegisterPage() {
               sx={{ mt: 3, mb: 2 }}
               disabled={isLoading}
             >
-              {isLoading ? 'Creating Account...' : 'Sign Up'}
+              {isLoading ? "Creating Account..." : "Sign Up"}
             </Button>
             <Box textAlign="center">
               <Link
                 component="button"
                 variant="body2"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate("/login")}
                 type="button"
               >
                 Already have an account? Sign In

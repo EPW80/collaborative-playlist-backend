@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -14,16 +14,11 @@ import {
   IconButton,
   CircularProgress,
   Grid,
-} from '@mui/material';
-import {
-  ArrowBack,
-  People,
-  Settings,
-  PlayArrow,
-} from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
-import { playlistAPI } from '../services/api';
-import socketService from '../services/websocket';
+} from "@mui/material";
+import { ArrowBack, People, Settings, PlayArrow } from "@mui/icons-material";
+import { useParams, useNavigate } from "react-router-dom";
+import { playlistAPI } from "../services/api";
+import socketService from "../services/websocket";
 
 function PlaylistPage() {
   const { id } = useParams();
@@ -39,31 +34,30 @@ function PlaylistPage() {
         const playlistData = response.data.data.playlist;
         setPlaylist(playlistData);
         setUserPermissions(playlistData.userAccess);
-        
+
         // Join playlist room for real-time updates
         socketService.joinPlaylist(id);
-        
+
         // Set up real-time listeners
         socketService.onPlaylistUpdate((updatedPlaylist) => {
           setPlaylist(updatedPlaylist);
         });
 
         socketService.onSongAdded((data) => {
-          setPlaylist(prev => ({
+          setPlaylist((prev) => ({
             ...prev,
-            songs: [...prev.songs, data.song]
+            songs: [...prev.songs, data.song],
           }));
         });
 
         socketService.onCollaboratorAdded((data) => {
-          setPlaylist(prev => ({
+          setPlaylist((prev) => ({
             ...prev,
-            collaborators: [...prev.collaborators, data.collaborator]
+            collaborators: [...prev.collaborators, data.collaborator],
           }));
         });
-
       } catch (error) {
-        console.error('Error loading playlist:', error);
+        console.error("Error loading playlist:", error);
       } finally {
         setLoading(false);
       }
@@ -80,18 +74,23 @@ function PlaylistPage() {
 
   const getRoleBadgeColor = (role) => {
     const colors = {
-      owner: 'error',
-      admin: 'warning', 
-      editor: 'info',
-      contributor: 'success',
-      viewer: 'default'
+      owner: "error",
+      admin: "warning",
+      editor: "info",
+      contributor: "success",
+      viewer: "default",
     };
-    return colors[role] || 'default';
+    return colors[role] || "default";
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+      >
         <CircularProgress />
       </Box>
     );
@@ -101,7 +100,9 @@ function PlaylistPage() {
     return (
       <Container>
         <Typography variant="h6">Playlist not found</Typography>
-        <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+        <Button onClick={() => navigate("/dashboard")}>
+          Back to Dashboard
+        </Button>
       </Container>
     );
   }
@@ -114,7 +115,7 @@ function PlaylistPage() {
           <IconButton
             edge="start"
             color="inherit"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate("/dashboard")}
             sx={{ mr: 2 }}
           >
             <ArrowBack />
@@ -122,8 +123,8 @@ function PlaylistPage() {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             {playlist.name}
           </Typography>
-          <Chip 
-            label={userPermissions?.role || 'viewer'} 
+          <Chip
+            label={userPermissions?.role || "viewer"}
             color={getRoleBadgeColor(userPermissions?.role)}
             size="small"
             sx={{ mr: 2 }}
@@ -146,22 +147,35 @@ function PlaylistPage() {
                 {playlist.name}
               </Typography>
               <Typography variant="body1" color="text.secondary" paragraph>
-                {playlist.description || 'No description'}
+                {playlist.description || "No description"}
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <Chip label={`${playlist.songs?.length || 0} songs`} size="small" />
-                <Chip label={playlist.isPublic ? 'Public' : 'Private'} size="small" />
-                <Chip 
-                  label={`Created by ${playlist.creator?.username}`} 
-                  size="small" 
-                  variant="outlined" 
+              <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+                <Chip
+                  label={`${playlist.songs?.length || 0} songs`}
+                  size="small"
+                />
+                <Chip
+                  label={playlist.isPublic ? "Public" : "Private"}
+                  size="small"
+                />
+                <Chip
+                  label={`Created by ${playlist.creator?.username}`}
+                  size="small"
+                  variant="outlined"
                 />
               </Box>
             </Paper>
 
             {/* Songs List */}
             <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
+              >
                 <Typography variant="h5">Songs</Typography>
                 {userPermissions?.permissions?.canEdit && (
                   <Button variant="contained" size="small">
@@ -169,7 +183,7 @@ function PlaylistPage() {
                   </Button>
                 )}
               </Box>
-              
+
               {playlist.songs?.length === 0 ? (
                 <Box textAlign="center" py={4}>
                   <Typography variant="body2" color="text.secondary">
@@ -187,7 +201,7 @@ function PlaylistPage() {
                     <ListItem key={index} divider>
                       <ListItemText
                         primary={song.title || `Song ${index + 1}`}
-                        secondary={song.artist || 'Unknown Artist'}
+                        secondary={song.artist || "Unknown Artist"}
                       />
                       <IconButton>
                         <PlayArrow />
@@ -203,32 +217,32 @@ function PlaylistPage() {
           <Grid item xs={12} md={4}>
             {/* Collaborators */}
             <Paper sx={{ p: 3, mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                 <People sx={{ mr: 1 }} />
                 <Typography variant="h6">Collaborators</Typography>
               </Box>
-              
+
               <List dense>
                 {/* Creator */}
                 <ListItem>
-                  <ListItemText 
+                  <ListItemText
                     primary={playlist.creator?.username}
                     secondary="Owner"
                   />
                   <Chip label="owner" color="error" size="small" />
                 </ListItem>
-                
+
                 {/* Collaborators */}
                 {playlist.collaborators?.map((collaborator, index) => (
                   <ListItem key={index}>
-                    <ListItemText 
-                      primary={collaborator.user?.username || 'Unknown User'}
+                    <ListItemText
+                      primary={collaborator.user?.username || "Unknown User"}
                       secondary={collaborator.role}
                     />
-                    <Chip 
-                      label={collaborator.role} 
+                    <Chip
+                      label={collaborator.role}
                       color={getRoleBadgeColor(collaborator.role)}
-                      size="small" 
+                      size="small"
                     />
                   </ListItem>
                 ))}
@@ -246,20 +260,28 @@ function PlaylistPage() {
               <Typography variant="h6" gutterBottom>
                 Your Permissions
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {Object.entries(userPermissions?.permissions || {}).map(([permission, allowed]) => (
-                  <Box key={permission} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">
-                      {permission.replace('can', '').replace(/([A-Z])/g, ' $1').toLowerCase()}
-                    </Typography>
-                    <Chip 
-                      label={allowed ? 'Yes' : 'No'} 
-                      size="small" 
-                      color={allowed ? 'success' : 'default'}
-                      variant={allowed ? 'filled' : 'outlined'}
-                    />
-                  </Box>
-                ))}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {Object.entries(userPermissions?.permissions || {}).map(
+                  ([permission, allowed]) => (
+                    <Box
+                      key={permission}
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography variant="body2">
+                        {permission
+                          .replace("can", "")
+                          .replace(/([A-Z])/g, " $1")
+                          .toLowerCase()}
+                      </Typography>
+                      <Chip
+                        label={allowed ? "Yes" : "No"}
+                        size="small"
+                        color={allowed ? "success" : "default"}
+                        variant={allowed ? "filled" : "outlined"}
+                      />
+                    </Box>
+                  )
+                )}
               </Box>
             </Paper>
           </Grid>
