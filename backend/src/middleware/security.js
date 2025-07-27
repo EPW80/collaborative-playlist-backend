@@ -59,6 +59,8 @@ const securityMiddleware = (app) => {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    // Trust proxy is handled at app level
+    trustProxy: false, // Let app.set('trust proxy') handle this
   });
 
   app.use("/api/", generalLimiter);
@@ -72,6 +74,8 @@ const securityMiddleware = (app) => {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    // Trust proxy is handled at app level
+    trustProxy: false, // Let app.set('trust proxy') handle this
   });
 
   app.use("/api/auth/login", authLimiter);

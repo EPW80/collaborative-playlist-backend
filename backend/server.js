@@ -15,6 +15,10 @@ handleProcessErrors();
 
 const app = express();
 const server = http.createServer(app);
+
+// Trust proxy for production deployment (Render, Heroku, etc.)
+app.set('trust proxy', 1);
+
 const io = socketIO(server, {
   cors: {
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
