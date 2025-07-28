@@ -12,8 +12,10 @@ class SocketService {
     }
 
     const serverUrl =
-      process.env.REACT_APP_API_URL ||
+      process.env.REACT_APP_WEBSOCKET_URL ||
       "https://collaborative-playlist-backend.onrender.com";
+
+    console.log("Connecting to WebSocket server:", serverUrl);
 
     this.socket = io(serverUrl, {
       auth: {
@@ -34,6 +36,16 @@ class SocketService {
 
     this.socket.on("connect_error", (error) => {
       console.error("Connection error:", error);
+      console.error("Error details:", {
+        message: error.message,
+        description: error.description,
+        context: error.context,
+        type: error.type,
+      });
+    });
+
+    this.socket.on("error", (error) => {
+      console.error("Socket error:", error);
     });
   }
 

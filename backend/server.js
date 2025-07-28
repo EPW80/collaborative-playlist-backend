@@ -25,7 +25,9 @@ const io = socketIO(server, {
       process.env.FRONTEND_URL || "http://localhost:3000",
       "http://localhost:3000",
       "http://localhost:3001",
-      "https://localhost:3000"
+      "https://localhost:3000",
+      "https://collaborative-playlist-manager.vercel.app",
+      "https://collaborative-playlist-manager-frontend.vercel.app",
     ],
     methods: ["GET", "POST"],
     credentials: true,
@@ -44,7 +46,9 @@ app.use(cors({
     process.env.FRONTEND_URL || "http://localhost:3000",
     "http://localhost:3000", 
     "http://localhost:3001",
-    "https://localhost:3000"
+    "https://localhost:3000",
+    "https://collaborative-playlist-manager.vercel.app",
+    "https://collaborative-playlist-manager-frontend.vercel.app",
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
