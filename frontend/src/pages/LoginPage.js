@@ -144,9 +144,16 @@ function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("🚀 LoginPage: Submitting login form", formData);
+    
     const result = await login(formData);
+    console.log("🎯 LoginPage: Login result:", result);
+    
     if (result.success) {
+      console.log("✅ LoginPage: Login successful, navigating to dashboard");
       navigate("/dashboard");
+    } else {
+      console.log("❌ LoginPage: Login failed:", result.error);
     }
   };
 
