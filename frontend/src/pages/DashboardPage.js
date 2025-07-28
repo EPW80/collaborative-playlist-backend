@@ -152,7 +152,7 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
-  
+
   // Create playlist modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
@@ -214,7 +214,8 @@ function DashboardPage() {
   };
 
   const handleFormChange = (field) => (event) => {
-    const value = field === "isPublic" ? event.target.value === "true" : event.target.value;
+    const value =
+      field === "isPublic" ? event.target.value === "true" : event.target.value;
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -230,7 +231,7 @@ function DashboardPage() {
 
   const validateForm = () => {
     const errors = {};
-    
+
     if (!formData.name.trim()) {
       errors.name = "Playlist name is required";
     } else if (formData.name.trim().length < 3) {
@@ -704,9 +705,10 @@ function DashboardPage() {
           fullWidth
           PaperProps={{
             sx: {
-              background: theme.palette.mode === "dark"
-                ? "linear-gradient(135deg, #1e1e1e, #2a2a2a)"
-                : "linear-gradient(135deg, #ffffff, #f8f9fa)",
+              background:
+                theme.palette.mode === "dark"
+                  ? "linear-gradient(135deg, #1e1e1e, #2a2a2a)"
+                  : "linear-gradient(135deg, #ffffff, #f8f9fa)",
               border: `1px solid ${
                 theme.palette.mode === "dark"
                   ? "rgba(0, 230, 118, 0.3)"
@@ -728,7 +730,10 @@ function DashboardPage() {
             🎵 Mint New Playlist
           </DialogTitle>
           <DialogContent sx={{ pt: 3 }}>
-            <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <Box
+              component="form"
+              sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+            >
               <TextField
                 label="Playlist Name"
                 value={formData.name}
@@ -749,13 +754,16 @@ function DashboardPage() {
                   },
                 }}
               />
-              
+
               <TextField
                 label="Description"
                 value={formData.description}
                 onChange={handleFormChange("description")}
                 error={!!formErrors.description}
-                helperText={formErrors.description || `${formData.description.length}/200 characters`}
+                helperText={
+                  formErrors.description ||
+                  `${formData.description.length}/200 characters`
+                }
                 fullWidth
                 multiline
                 rows={3}
@@ -780,7 +788,10 @@ function DashboardPage() {
                   label="Visibility"
                   sx={{
                     "& .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.23)" : "rgba(0, 0, 0, 0.23)",
+                      borderColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255, 255, 255, 0.23)"
+                          : "rgba(0, 0, 0, 0.23)",
                     },
                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
                       borderColor: theme.palette.primary.main,
@@ -806,9 +817,10 @@ function DashboardPage() {
                 sx={{
                   p: 2,
                   borderRadius: 2,
-                  background: theme.palette.mode === "dark"
-                    ? "rgba(0, 230, 118, 0.1)"
-                    : "rgba(25, 118, 210, 0.1)",
+                  background:
+                    theme.palette.mode === "dark"
+                      ? "rgba(0, 230, 118, 0.1)"
+                      : "rgba(25, 118, 210, 0.1)",
                   border: `1px solid ${
                     theme.palette.mode === "dark"
                       ? "rgba(0, 230, 118, 0.3)"
@@ -819,13 +831,25 @@ function DashboardPage() {
                 <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
                   🔗 Blockchain Features:
                 </Typography>
-                <Typography variant="caption" display="block" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  display="block"
+                  color="text.secondary"
+                >
                   • Decentralized collaboration with role-based permissions
                 </Typography>
-                <Typography variant="caption" display="block" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  display="block"
+                  color="text.secondary"
+                >
                   • Real-time synchronization across all connected nodes
                 </Typography>
-                <Typography variant="caption" display="block" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  display="block"
+                  color="text.secondary"
+                >
                   • Immutable playlist history and version tracking
                 </Typography>
               </Box>
@@ -838,9 +862,10 @@ function DashboardPage() {
               sx={{
                 color: theme.palette.text.secondary,
                 "&:hover": {
-                  background: theme.palette.mode === "dark"
-                    ? "rgba(255, 255, 255, 0.05)"
-                    : "rgba(0, 0, 0, 0.05)",
+                  background:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255, 255, 255, 0.05)"
+                      : "rgba(0, 0, 0, 0.05)",
                 },
               }}
             >
@@ -885,9 +910,10 @@ function DashboardPage() {
             severity={snackbar.severity}
             sx={{
               width: "100%",
-              background: theme.palette.mode === "dark"
-                ? "linear-gradient(135deg, #1e1e1e, #2a2a2a)"
-                : "linear-gradient(135deg, #ffffff, #f8f9fa)",
+              background:
+                theme.palette.mode === "dark"
+                  ? "linear-gradient(135deg, #1e1e1e, #2a2a2a)"
+                  : "linear-gradient(135deg, #ffffff, #f8f9fa)",
               color: theme.palette.text.primary,
               border: `1px solid ${
                 snackbar.severity === "success"

@@ -125,13 +125,15 @@ export function AuthProvider({ children }) {
   const login = async (credentials) => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-      
-      console.log("🔐 Attempting login with credentials:", { email: credentials.email });
+
+      console.log("🔐 Attempting login with credentials:", {
+        email: credentials.email,
+      });
       console.log("🌐 API URL:", process.env.REACT_APP_API_URL);
 
       const response = await authAPI.login(credentials);
       console.log("✅ Login response received:", response.data);
-      
+
       const { token, user } = response.data.data;
 
       // Store in localStorage
@@ -152,7 +154,7 @@ export function AuthProvider({ children }) {
       console.error("❌ Login error:", error);
       console.error("❌ Error response:", error.response?.data);
       console.error("❌ Error status:", error.response?.status);
-      
+
       const errorMessage = error.response?.data?.message || "Login failed";
       dispatch({
         type: AUTH_ACTIONS.LOGIN_FAILURE,
