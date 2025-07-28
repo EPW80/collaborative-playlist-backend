@@ -17,7 +17,7 @@ const app = express();
 const server = http.createServer(app);
 
 // Trust proxy for production deployment (Render, Heroku, etc.)
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 
 const io = socketIO(server, {
   cors: {
@@ -47,25 +47,27 @@ realtimeService.initialize(io);
 securityMiddleware(app);
 
 // Middleware
-app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || "http://localhost:3000",
-    "http://localhost:3000", 
-    "http://localhost:3001",
-    "https://localhost:3000",
-    "https://collaborative-playlist-manager.vercel.app",
-    "https://collaborative-playlist-manager-frontend.vercel.app",
-    "https://frontend-fmkzh7bw8-epws-projects.vercel.app",
-    "https://frontend-hesppgsdf-epws-projects.vercel.app",
-    "https://frontend-ea667cfzq-epws-projects.vercel.app",
-    "https://frontend-bf7qnn1gk-epws-projects.vercel.app",
-    "https://frontend-24pxpi8sa-epws-projects.vercel.app",
-    "https://frontend-1e171y0ib-epws-projects.vercel.app",
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: [
+      process.env.FRONTEND_URL || "http://localhost:3000",
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "https://localhost:3000",
+      "https://collaborative-playlist-manager.vercel.app",
+      "https://collaborative-playlist-manager-frontend.vercel.app",
+      "https://frontend-fmkzh7bw8-epws-projects.vercel.app",
+      "https://frontend-hesppgsdf-epws-projects.vercel.app",
+      "https://frontend-ea667cfzq-epws-projects.vercel.app",
+      "https://frontend-bf7qnn1gk-epws-projects.vercel.app",
+      "https://frontend-24pxpi8sa-epws-projects.vercel.app",
+      "https://frontend-1e171y0ib-epws-projects.vercel.app",
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
