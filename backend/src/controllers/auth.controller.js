@@ -32,9 +32,6 @@ exports.register = asyncHandler(async (req, res, next) => {
 
   const { username, email, password, role, adminSecret } = req.body;
 
-  // Debug logging
-  console.log('🔍 Registration attempt:', { username, email, role, hasSecret: !!adminSecret });
-
   // Handle admin role assignment
   let userRole = "user"; // default role
   
@@ -42,10 +39,7 @@ exports.register = asyncHandler(async (req, res, next) => {
     // If requesting admin privileges, validate admin secret
     const ADMIN_SECRET = process.env.ADMIN_REGISTRATION_SECRET;
     
-    console.log('🔐 Admin role requested:', { role, providedSecret: adminSecret, expectedSecret: ADMIN_SECRET });
-    
     if (!adminSecret || adminSecret !== ADMIN_SECRET) {
-      console.log('❌ Admin secret validation failed');
       return next(new AppError("Invalid admin secret required for elevated roles", 403));
     }
     
@@ -56,7 +50,6 @@ exports.register = asyncHandler(async (req, res, next) => {
     }
     
     userRole = role;
-    console.log('✅ Admin role approved:', userRole);
   }
 
   // Check if user already exists
