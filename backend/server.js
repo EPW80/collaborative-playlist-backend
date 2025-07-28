@@ -35,6 +35,7 @@ const io = socketIO(server, {
       "https://frontend-24pxpi8sa-epws-projects.vercel.app",
       "https://frontend-1e171y0ib-epws-projects.vercel.app",
       "https://frontend-9w3i1s0nf-epws-projects.vercel.app",
+      "https://frontend-euf1ta4lc-epws-projects.vercel.app"
     ],
     methods: ["GET", "POST"],
     credentials: true,
