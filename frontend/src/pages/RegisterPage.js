@@ -16,6 +16,10 @@ import {
   Chip,
   IconButton,
   InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
   Security,
@@ -29,6 +33,8 @@ import {
   Email,
   Person,
   CheckCircle,
+  AdminPanelSettings,
+  VpnKey,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -134,6 +140,8 @@ function RegisterPage() {
     email: "",
     password: "",
     confirmPassword: "",
+    role: "user",
+    adminSecret: "",
   });
   const [validationError, setValidationError] = useState("");
 
@@ -160,6 +168,12 @@ function RegisterPage() {
 
     if (formData.password.length < 6) {
       setValidationError("Password must be at least 6 characters long");
+      return;
+    }
+
+    // Validate admin secret if admin role is selected
+    if (formData.role === 'admin' && !formData.adminSecret.trim()) {
+      setValidationError("Admin secret key is required for administrator accounts");
       return;
     }
 
@@ -426,6 +440,55 @@ function RegisterPage() {
                         },
                       }}
                     />
+
+                    <FormControl fullWidth margin="normal">
+                      <InputLabel id="role-select-label">Account Type</InputLabel>
+                      <Select
+                        labelId="role-select-label"
+                        id="role"
+                        name="role"
+                        value={formData.role}
+                        onChange={handleChange}
+                        disabled={isLoading}
+                        label="Account Type"
+                        startAdornment={
+                          <InputAdornment position="start">
+                            <AdminPanelSettings color="primary" />
+                          </InputAdornment>
+                        }
+                      >
+                        <MenuItem value="user">Standard User</MenuItem>
+                        <MenuItem value="admin">Administrator</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    {formData.role === 'admin' && (
+                      <TextField
+                        margin="normal"
+                        required
+                        fullWidth
+                        name="adminSecret"
+                        label="Admin Secret Key"
+                        type="password"
+                        value={formData.adminSecret}
+                        onChange={handleChange}
+                        disabled={isLoading}
+                        helperText="Enter the admin secret key to create an administrator account"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <VpnKey color="primary" />
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{
+                          "& .MuiInputLabel-root": {
+                            color: "text.secondary",
+                            fontWeight: 500,
+                          },
+                        }}
+                      />
+                    )}
 
                     <TextField
                       margin="normal"
