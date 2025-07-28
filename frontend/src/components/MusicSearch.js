@@ -88,26 +88,39 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
   }, [searchQuery, handleSearch]);
 
   const handleAddSong = async (song) => {
-    if (!playlistId) return;
+    if (!playlistId) {
+      setError("No playlist selected");
+      return;
+    }
 
     setAddingStates((prev) => ({ ...prev, [song.id]: true }));
 
     try {
+      // Construct song data with proper validation
       const songData = {
         playlistId,
-        title: song.title || song.name,
-        artist: song.artist || (song.artists && song.artists[0]?.name),
-        album: song.album || song.album?.name,
+        title: song.title || song.name || "Unknown Title",
+        artist: song.artist || (song.artists && song.artists[0]?.name) || "Unknown Artist",
+        album: song.album || song.album?.name || "",
         duration: song.duration_ms
           ? Math.floor(song.duration_ms / 1000)
-          : song.duration,
-        spotifyId: song.id,
-        externalUrl: song.external_urls?.spotify || song.url,
-        preview_url: song.preview_url,
-        image: song.album?.images?.[0]?.url || song.image,
+          : (song.duration || 180), // Default to 3 minutes if no duration
+        spotifyId: song.id || "",
       };
 
+      // Validate required fields
+      if (!songData.title || !songData.artist || !songData.duration) {
+        throw new Error("Missing required song information (title, artist, or duration)");
+      }
+
+      if (typeof songData.duration !== 'number' || songData.duration <= 0) {
+        songData.duration = 180; // Default duration
+      }
+
+      console.log("🎵 Adding song to playlist:", songData);
+
       const response = await songAPI.add(songData);
+      console.log("✅ Song added successfully:", response.data);
 
       // Notify parent component
       if (onSongAdded) {
@@ -116,13 +129,17 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
 
       // Remove the added song from results or show success
       setSearchResults((prev) => prev.filter((s) => s.id !== song.id));
+      setError(""); // Clear any previous errors
     } catch (err) {
-      console.error("Add song error:", err);
-      setError(
-        `Failed to add "${song.title || song.name}": ${
-          err.response?.data?.message || "Unknown error"
-        }`
-      );
+      console.error("❌ Add song error:", err);
+      console.error("Error response:", err.response?.data);
+      
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error || 
+                          err.message || 
+                          "Unknown error occurred";
+                          
+      setError(`Failed to add "${song.title || song.name}": ${errorMessage}`);
     } finally {
       setAddingStates((prev) => ({ ...prev, [song.id]: false }));
     }
