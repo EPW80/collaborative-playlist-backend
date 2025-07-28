@@ -30,7 +30,34 @@ exports.register = asyncHandler(async (req, res, next) => {
     return next(new AppError("Validation failed", 400, errors.array()));
   }
 
-  const { username, email, password } = req.body;
+  const { username, email, password, role, adminSecret } = req.body;
+
+  // Debug logging
+  console.log('🔍 Registration attempt:', { username, email, role, hasSecret: !!adminSecret });
+
+  // Handle admin role assignment
+  let userRole = "user"; // default role
+  
+  if (role && role !== "user") {
+    // If requesting admin privileges, validate admin secret
+    const ADMIN_SECRET = process.env.ADMIN_REGISTRATION_SECRET;
+    
+    console.log('🔐 Admin role requested:', { role, providedSecret: adminSecret, expectedSecret: ADMIN_SECRET });
+    
+    if (!adminSecret || adminSecret !== ADMIN_SECRET) {
+      console.log('❌ Admin secret validation failed');
+      return next(new AppError("Invalid admin secret required for elevated roles", 403));
+    }
+    
+    // Validate the requested role
+    const allowedRoles = ["user", "moderator", "admin", "superadmin"];
+    if (!allowedRoles.includes(role)) {
+      return next(new AppError("Invalid role specified", 400));
+    }
+    
+    userRole = role;
+    console.log('✅ Admin role approved:', userRole);
+  }
 
   // Check if user already exists
   const existingUser = await User.findOne({
@@ -45,19 +72,25 @@ exports.register = asyncHandler(async (req, res, next) => {
     return next(new AppError(message, 409));
   }
 
-  // Create new user
-  const user = new User({ username, email, password });
+  // Create new user with role
+  const user = new User({ 
+    username, 
+    email, 
+    password, 
+    role: userRole 
+  });
   await user.save();
 
   // Generate token
   const token = generateToken(user._id);
 
   // Log registration event
-  console.log(`✅ New user registered: ${user.username} (${user.email})`);
+  const roleLabel = userRole === "user" ? "user" : `${userRole} user`;
+  console.log(`✅ New ${roleLabel} registered: ${user.username} (${user.email})`);
 
   res.status(201).json({
     success: true,
-    message: "User registered successfully",
+    message: `${userRole === "user" ? "User" : `${userRole} user`} registered successfully`,
     data: {
       token,
       user: formatUserResponse(user),

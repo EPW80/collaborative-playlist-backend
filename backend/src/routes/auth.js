@@ -34,22 +34,34 @@ const validateRequest = (req, res, next) => {
 
 /**
  * @route   POST /api/auth/register
- * @desc    Register a new user account
- * @access  Public
+ * @desc    Register a new user account (with optional admin role)
+ * @access  Public (admin roles require adminSecret)
  * @param   {Object} body - User registration data
  * @param   {string} body.username - Username (3-30 characters, required)
  * @param   {string} body.email - Valid email address (required)
  * @param   {string} body.password - Password (min 6 characters, required)
+ * @param   {string} body.role - User role: "user", "moderator", "admin", "superadmin" (optional, defaults to "user")
+ * @param   {string} body.adminSecret - Admin secret (required only for non-user roles)
  * @returns {Object} 201 - User registered successfully with token
  * @returns {Object} 400 - Validation error
+ * @returns {Object} 403 - Invalid admin secret (for elevated roles)
  * @returns {Object} 409 - Email or username already exists
  * @returns {Object} 500 - Server error
  * @example
- * // Request body:
+ * // Request body (regular user):
  * {
  *   "username": "johndoe",
  *   "email": "john@example.com",
  *   "password": "securePassword123"
+ * }
+ *
+ * // Request body (admin user):
+ * {
+ *   "username": "admin_user",
+ *   "email": "admin@example.com",
+ *   "password": "securePassword123",
+ *   "role": "admin",
+ *   "adminSecret": "your_admin_secret_here"
  * }
  *
  * // Response:
@@ -81,6 +93,14 @@ router.post(
     body("password")
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters"),
+    body("role")
+      .optional()
+      .isIn(["user", "moderator", "admin", "superadmin"])
+      .withMessage("Role must be one of: user, moderator, admin, superadmin"),
+    body("adminSecret")
+      .optional()
+      .isString()
+      .withMessage("Admin secret must be a string"),
   ],
   register
 );
