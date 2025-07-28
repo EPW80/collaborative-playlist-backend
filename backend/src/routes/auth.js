@@ -230,7 +230,7 @@ router.get("/me", auth, async (req, res, next) => {
     // If response was successful, enhance with real-time data
     if (res.headersSent) return;
 
-    const userId = req.user.id;
+    const userId = req.userId;
 
     // Get user status from cache
     const userStatus = (await cacheService.get(
