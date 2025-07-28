@@ -172,8 +172,10 @@ function RegisterPage() {
     }
 
     // Validate admin secret if admin role is selected
-    if (formData.role === 'admin' && !formData.adminSecret.trim()) {
-      setValidationError("Admin secret key is required for administrator accounts");
+    if (formData.role === "admin" && !formData.adminSecret.trim()) {
+      setValidationError(
+        "Admin secret key is required for administrator accounts"
+      );
       return;
     }
 
@@ -442,7 +444,9 @@ function RegisterPage() {
                     />
 
                     <FormControl fullWidth margin="normal">
-                      <InputLabel id="role-select-label">Account Type</InputLabel>
+                      <InputLabel id="role-select-label">
+                        Account Type
+                      </InputLabel>
                       <Select
                         labelId="role-select-label"
                         id="role"
@@ -462,7 +466,7 @@ function RegisterPage() {
                       </Select>
                     </FormControl>
 
-                    {formData.role === 'admin' && (
+                    {formData.role === "admin" && (
                       <TextField
                         margin="normal"
                         required
