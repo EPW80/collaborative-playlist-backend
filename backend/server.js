@@ -66,6 +66,7 @@ app.use(
       "https://frontend-1e171y0ib-epws-projects.vercel.app",
       "https://frontend-3eah0e0y4-epws-projects.vercel.app",
       "https://frontend-9w3i1s0nf-epws-projects.vercel.app",
+      "https://frontend-euf1ta4lc-epws-projects.vercel.app",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
