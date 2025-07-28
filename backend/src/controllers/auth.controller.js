@@ -17,6 +17,7 @@ const formatUserResponse = (user) => {
     id: user._id,
     username: user.username,
     email: user.email,
+    role: user.role,
     profilePicture: user.profilePicture,
     createdAt: user.createdAt,
   };
@@ -60,6 +61,68 @@ exports.register = asyncHandler(async (req, res, next) => {
     data: {
       token,
       user: formatUserResponse(user),
+    },
+  });
+});
+
+// Register admin user (restricted endpoint)
+exports.registerAdmin = asyncHandler(async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(new AppError("Validation failed", 400, errors.array()));
+  }
+
+  const { username, email, password, adminSecret, role = "admin" } = req.body;
+
+  // Check admin secret (environment variable for security)
+  const ADMIN_SECRET = process.env.ADMIN_REGISTRATION_SECRET;
+  if (!ADMIN_SECRET || adminSecret !== ADMIN_SECRET) {
+    return next(new AppError("Invalid admin secret", 403));
+  }
+
+  // Validate role
+  const allowedAdminRoles = ["admin", "superadmin"];
+  if (!allowedAdminRoles.includes(role)) {
+    return next(new AppError("Invalid admin role", 400));
+  }
+
+  // Check if user already exists
+  const existingUser = await User.findOne({
+    $or: [{ email }, { username }],
+  });
+
+  if (existingUser) {
+    const message =
+      existingUser.email === email
+        ? "Email already registered"
+        : "Username already taken";
+    return next(new AppError(message, 409));
+  }
+
+  // Create new admin user
+  const user = new User({ 
+    username, 
+    email, 
+    password, 
+    role 
+  });
+  await user.save();
+
+  // Generate token
+  const token = generateToken(user._id);
+
+  // Log admin registration event
+  console.log(`🔐 New ${role} registered: ${user.username} (${user.email})`);
+
+  res.status(201).json({
+    success: true,
+    message: `${role} user registered successfully`,
+    data: {
+      token,
+      user: {
+        ...formatUserResponse(user),
+        role: user.role,
+      },
     },
   });
 });

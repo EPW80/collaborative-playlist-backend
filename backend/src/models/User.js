@@ -30,6 +30,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    role: {
+      type: String,
+      enum: ["user", "moderator", "admin", "superadmin"],
+      default: "user",
+    },
     preferences: {
       theme: {
         type: String,
@@ -55,6 +60,24 @@ userSchema.pre("save", async function (next) {
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+userSchema.methods.isAdmin = function () {
+  return this.role === "admin" || this.role === "superadmin";
+};
+
+userSchema.methods.isSuperAdmin = function () {
+  return this.role === "superadmin";
+};
+
+userSchema.methods.hasRoleLevel = function (requiredRole) {
+  const roleHierarchy = {
+    user: 1,
+    moderator: 2,
+    admin: 3,
+    superadmin: 4,
+  };
+  return roleHierarchy[this.role] >= roleHierarchy[requiredRole];
 };
 
 // Database indexes for performance optimization

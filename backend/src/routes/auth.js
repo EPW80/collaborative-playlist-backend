@@ -4,6 +4,7 @@ const auth = require("../middleware/auth");
 const cacheService = require("../services/cacheService");
 const {
   register,
+  registerAdmin,
   login,
   getCurrentUser,
   updateProfile,
@@ -82,6 +83,56 @@ router.post(
       .withMessage("Password must be at least 6 characters"),
   ],
   register
+);
+
+/**
+ * @route   POST /api/auth/register-admin
+ * @desc    Register a new admin user (requires admin secret)
+ * @access  Restricted (requires admin secret)
+ * @param   {Object} body - Admin registration data
+ * @param   {string} body.username - Username (3-30 characters, required)
+ * @param   {string} body.email - Valid email address (required)
+ * @param   {string} body.password - Password (min 6 characters, required)
+ * @param   {string} body.adminSecret - Admin registration secret (required)
+ * @param   {string} body.role - Admin role: "admin" or "superadmin" (optional, defaults to "admin")
+ * @returns {Object} 201 - Admin registered successfully with token
+ * @returns {Object} 400 - Validation error
+ * @returns {Object} 403 - Invalid admin secret
+ * @returns {Object} 409 - Email or username already exists
+ * @returns {Object} 500 - Server error
+ * @example
+ * // Request body:
+ * {
+ *   "username": "admin_john",
+ *   "email": "admin@example.com",
+ *   "password": "securepassword123",
+ *   "adminSecret": "your_admin_secret_here",
+ *   "role": "admin"
+ * }
+ */
+router.post(
+  "/register-admin",
+  [
+    body("username")
+      .isLength({ min: 3, max: 30 })
+      .trim()
+      .withMessage("Username must be 3-30 characters"),
+    body("email")
+      .isEmail()
+      .normalizeEmail()
+      .withMessage("Valid email is required"),
+    body("password")
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters"),
+    body("adminSecret")
+      .notEmpty()
+      .withMessage("Admin secret is required"),
+    body("role")
+      .optional()
+      .isIn(["admin", "superadmin"])
+      .withMessage("Role must be either 'admin' or 'superadmin'"),
+  ],
+  registerAdmin
 );
 
 /**
