@@ -21,6 +21,17 @@ import {
   Chip,
   Skeleton,
   Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  Alert,
+  Snackbar,
+  CircularProgress,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -141,6 +152,21 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
+  
+  // Create playlist modal state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    isPublic: true,
+  });
+  const [formErrors, setFormErrors] = useState({});
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
   const theme = createBlockchainTheme(darkMode);
 
@@ -174,8 +200,98 @@ function DashboardPage() {
   };
 
   const handleCreatePlaylist = () => {
-    // Navigate to create playlist or open modal
-    console.log("Create playlist functionality coming soon!");
+    setCreateModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setCreateModalOpen(false);
+    setFormData({
+      name: "",
+      description: "",
+      isPublic: true,
+    });
+    setFormErrors({});
+  };
+
+  const handleFormChange = (field) => (event) => {
+    const value = field === "isPublic" ? event.target.value === "true" : event.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    // Clear error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors((prev) => ({
+        ...prev,
+        [field]: "",
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = "Playlist name is required";
+    } else if (formData.name.trim().length < 3) {
+      errors.name = "Playlist name must be at least 3 characters";
+    } else if (formData.name.trim().length > 50) {
+      errors.name = "Playlist name must be less than 50 characters";
+    }
+
+    if (formData.description && formData.description.length > 200) {
+      errors.description = "Description must be less than 200 characters";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmitPlaylist = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setCreateLoading(true);
+    try {
+      const playlistData = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        isPublic: formData.isPublic,
+      };
+
+      const response = await playlistAPI.create(playlistData);
+      const newPlaylist = response.data.data.playlist;
+
+      // Add the new playlist to the list
+      setPlaylists((prev) => [newPlaylist, ...prev]);
+
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: "Playlist created successfully!",
+        severity: "success",
+      });
+
+      // Close modal and reset form
+      handleCloseModal();
+
+      // Optionally navigate to the new playlist
+      // navigate(`/playlist/${newPlaylist._id}`);
+    } catch (error) {
+      console.error("Error creating playlist:", error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || "Failed to create playlist",
+        severity: "error",
+      });
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   const handlePlaylistClick = (playlistId) => {
@@ -579,6 +695,212 @@ function DashboardPage() {
             </Grid>
           )}
         </Container>
+
+        {/* Create Playlist Modal */}
+        <Dialog
+          open={createModalOpen}
+          onClose={handleCloseModal}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              background: theme.palette.mode === "dark"
+                ? "linear-gradient(135deg, #1e1e1e, #2a2a2a)"
+                : "linear-gradient(135deg, #ffffff, #f8f9fa)",
+              border: `1px solid ${
+                theme.palette.mode === "dark"
+                  ? "rgba(0, 230, 118, 0.3)"
+                  : "rgba(25, 118, 210, 0.3)"
+              }`,
+              borderRadius: 3,
+            },
+          }}
+        >
+          <DialogTitle
+            sx={{
+              background: "linear-gradient(45deg, #1976d2, #00e676)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              fontWeight: 700,
+              fontSize: "1.5rem",
+            }}
+          >
+            🎵 Mint New Playlist
+          </DialogTitle>
+          <DialogContent sx={{ pt: 3 }}>
+            <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <TextField
+                label="Playlist Name"
+                value={formData.name}
+                onChange={handleFormChange("name")}
+                error={!!formErrors.name}
+                helperText={formErrors.name}
+                fullWidth
+                required
+                placeholder="Enter your playlist name..."
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    "&.Mui-focused fieldset": {
+                      borderColor: theme.palette.primary.main,
+                    },
+                  },
+                  "& .MuiInputLabel-root.Mui-focused": {
+                    color: theme.palette.primary.main,
+                  },
+                }}
+              />
+              
+              <TextField
+                label="Description"
+                value={formData.description}
+                onChange={handleFormChange("description")}
+                error={!!formErrors.description}
+                helperText={formErrors.description || `${formData.description.length}/200 characters`}
+                fullWidth
+                multiline
+                rows={3}
+                placeholder="Describe your playlist..."
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    "&.Mui-focused fieldset": {
+                      borderColor: theme.palette.primary.main,
+                    },
+                  },
+                  "& .MuiInputLabel-root.Mui-focused": {
+                    color: theme.palette.primary.main,
+                  },
+                }}
+              />
+
+              <FormControl fullWidth>
+                <InputLabel>Visibility</InputLabel>
+                <Select
+                  value={formData.isPublic.toString()}
+                  onChange={handleFormChange("isPublic")}
+                  label="Visibility"
+                  sx={{
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.23)" : "rgba(0, 0, 0, 0.23)",
+                    },
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: theme.palette.primary.main,
+                    },
+                  }}
+                >
+                  <MenuItem value="true">
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Public sx={{ color: "#00e676" }} />
+                      Public Chain - Anyone can discover
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="false">
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Lock sx={{ color: "#ff9800" }} />
+                      Private Chain - Invite only
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
+
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  background: theme.palette.mode === "dark"
+                    ? "rgba(0, 230, 118, 0.1)"
+                    : "rgba(25, 118, 210, 0.1)",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(0, 230, 118, 0.3)"
+                      : "rgba(25, 118, 210, 0.3)"
+                  }`,
+                }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+                  🔗 Blockchain Features:
+                </Typography>
+                <Typography variant="caption" display="block" color="text.secondary">
+                  • Decentralized collaboration with role-based permissions
+                </Typography>
+                <Typography variant="caption" display="block" color="text.secondary">
+                  • Real-time synchronization across all connected nodes
+                </Typography>
+                <Typography variant="caption" display="block" color="text.secondary">
+                  • Immutable playlist history and version tracking
+                </Typography>
+              </Box>
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ p: 3, pt: 1 }}>
+            <Button
+              onClick={handleCloseModal}
+              disabled={createLoading}
+              sx={{
+                color: theme.palette.text.secondary,
+                "&:hover": {
+                  background: theme.palette.mode === "dark"
+                    ? "rgba(255, 255, 255, 0.05)"
+                    : "rgba(0, 0, 0, 0.05)",
+                },
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitPlaylist}
+              disabled={createLoading || !formData.name.trim()}
+              variant="contained"
+              startIcon={
+                createLoading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <AddIcon />
+                )
+              }
+              sx={{
+                background: "linear-gradient(45deg, #00e676, #1976d2)",
+                "&:hover": {
+                  background: "linear-gradient(45deg, #00c853, #1565c0)",
+                },
+                "&:disabled": {
+                  background: "rgba(0, 0, 0, 0.12)",
+                  color: "rgba(0, 0, 0, 0.26)",
+                },
+              }}
+            >
+              {createLoading ? "Minting..." : "Mint Playlist"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Success/Error Snackbar */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        >
+          <Alert
+            onClose={handleCloseSnackbar}
+            severity={snackbar.severity}
+            sx={{
+              width: "100%",
+              background: theme.palette.mode === "dark"
+                ? "linear-gradient(135deg, #1e1e1e, #2a2a2a)"
+                : "linear-gradient(135deg, #ffffff, #f8f9fa)",
+              color: theme.palette.text.primary,
+              border: `1px solid ${
+                snackbar.severity === "success"
+                  ? "#00e676"
+                  : snackbar.severity === "error"
+                  ? "#f44336"
+                  : "#ff9800"
+              }`,
+            }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Box>
     </ThemeProvider>
   );
