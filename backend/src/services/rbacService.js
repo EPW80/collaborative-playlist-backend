@@ -26,6 +26,8 @@ class RBACService {
       viewer: {
         canView: true,
         canSuggest: false,
+        canAddSongs: false,     // Viewers cannot add songs
+        canRemoveSongs: false,  // Viewers cannot remove songs
         canEdit: false,
         canManageCollaborators: false,
         canDelete: false,
@@ -36,6 +38,8 @@ class RBACService {
       contributor: {
         canView: true,
         canSuggest: true,
+        canAddSongs: true,      // Contributors can add songs
+        canRemoveSongs: true,   // Contributors can remove songs  
         canEdit: false,
         canManageCollaborators: false,
         canDelete: false,
@@ -46,6 +50,8 @@ class RBACService {
       editor: {
         canView: true,
         canSuggest: true,
+        canAddSongs: true,      // Editors can add songs
+        canRemoveSongs: true,   // Editors can remove songs
         canEdit: true,
         canManageCollaborators: false,
         canDelete: false,
@@ -56,6 +62,8 @@ class RBACService {
       admin: {
         canView: true,
         canSuggest: true,
+        canAddSongs: true,      // Admins can add songs
+        canRemoveSongs: true,   // Admins can remove songs
         canEdit: true,
         canManageCollaborators: true,
         canDelete: false,
@@ -66,6 +74,8 @@ class RBACService {
       owner: {
         canView: true,
         canSuggest: true,
+        canAddSongs: true,      // Owners can add songs
+        canRemoveSongs: true,   // Owners can remove songs
         canEdit: true,
         canManageCollaborators: true,
         canDelete: true,

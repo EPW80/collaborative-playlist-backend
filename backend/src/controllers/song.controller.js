@@ -75,18 +75,17 @@ exports.addSong = asyncHandler(async (req, res, next) => {
     return next(new AppError("Playlist not found", 404));
   }
 
+  // Use RBAC service to check permissions
+  const rbacService = require("../services/rbacService");
+  
   // Check if user has permission to add songs
-  const isCreator = playlist.creator.toString() === req.userId;
-  const isCollaborator = playlist.collaborators.some(
-    (collab) =>
-      collab.user.toString() === req.userId &&
-      (collab.role === "admin" || collab.role === "editor")
-  );
-
-  if (!isCreator && !isCollaborator) {
+  const canAddSongs = rbacService.hasPermission(req.userId, playlist, "canAddSongs");
+  
+  if (!canAddSongs) {
+    const userRole = rbacService.getUserRole(req.userId, playlist);
     return next(
       new AppError(
-        "Access denied: Not authorized to add songs to this playlist",
+        `Access denied: ${userRole || 'No access'} role cannot add songs to this playlist. Required: contributor or higher.`,
         403
       )
     );
@@ -184,18 +183,17 @@ exports.removeSong = asyncHandler(async (req, res, next) => {
     return next(new AppError("Playlist not found", 404));
   }
 
+  // Use RBAC service to check permissions
+  const rbacService = require("../services/rbacService");
+  
   // Check if user has permission to remove songs
-  const isCreator = playlist.creator.toString() === req.userId;
-  const isCollaborator = playlist.collaborators.some(
-    (collab) =>
-      collab.user.toString() === req.userId &&
-      (collab.role === "admin" || collab.role === "editor")
-  );
-
-  if (!isCreator && !isCollaborator) {
+  const canRemoveSongs = rbacService.hasPermission(req.userId, playlist, "canRemoveSongs");
+  
+  if (!canRemoveSongs) {
+    const userRole = rbacService.getUserRole(req.userId, playlist);
     return next(
       new AppError(
-        "Access denied: Not authorized to remove songs from this playlist",
+        `Access denied: ${userRole || 'No access'} role cannot remove songs from this playlist. Required: contributor or higher.`,
         403
       )
     );
