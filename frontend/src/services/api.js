@@ -55,6 +55,33 @@ export const playlistAPI = {
   search: (query) => api.get(`/playlists/search?q=${query}`),
 };
 
+// Song API calls
+export const songAPI = {
+  getByPlaylist: (playlistId) => api.get(`/songs?playlistId=${playlistId}`),
+  add: (songData) => api.post("/songs", songData),
+  remove: (songId, playlistId) => api.delete(`/songs/${songId}?playlistId=${playlistId}`),
+  search: (playlistId, query) => api.get(`/songs/search?playlistId=${playlistId}&q=${query}`),
+  reorder: (reorderData) => api.put("/songs/reorder", reorderData),
+};
+
+// Music Search API calls
+export const searchAPI = {
+  tracks: (query, service = "spotify") => api.get(`/search/tracks?q=${encodeURIComponent(query)}&service=${service}`),
+  artist: (name) => api.get(`/search/artist?name=${encodeURIComponent(name)}`),
+  spotifyAuth: () => api.get("/search/spotify/auth"),
+};
+
+// Lyrics API calls
+export const lyricsAPI = {
+  health: () => api.get("/lyrics/health"),
+  search: (query) => api.get(`/lyrics/search?q=${encodeURIComponent(query)}`),
+  getSong: (songId) => api.get(`/lyrics/song/${songId}`),
+  getArtist: (artistId) => api.get(`/lyrics/artist/${artistId}`),
+  findLyrics: (title, artist) => api.get(`/lyrics/find?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`),
+  getTrending: () => api.get("/lyrics/trending"),
+  enrich: (songId) => api.post(`/lyrics/enrich/${songId}`),
+};
+
 // RBAC API calls
 export const rbacAPI = {
   addCollaborator: (playlistId, collaboratorData) =>

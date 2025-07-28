@@ -38,11 +38,14 @@ import {
   AccountTree,
   Security,
   Speed,
+  Add as AddIcon,
+  MusicNote,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import { playlistAPI } from "../services/api";
 import socketService from "../services/websocket";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import MusicSearch from "../components/MusicSearch";
 
 // Blockchain-inspired theme
 const createBlockchainTheme = (darkMode) => {
@@ -291,6 +294,22 @@ function PlaylistPage() {
   const [darkMode, setDarkMode] = useState(true); // Default to blockchain dark theme
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [musicSearchOpen, setMusicSearchOpen] = useState(false);
+
+  const handleSongAdded = (newSong) => {
+    setPlaylist((prev) => ({
+      ...prev,
+      songs: [...(prev.songs || []), newSong],
+    }));
+  };
+
+  const handleOpenMusicSearch = () => {
+    setMusicSearchOpen(true);
+  };
+
+  const handleCloseMusicSearch = () => {
+    setMusicSearchOpen(false);
+  };
 
   const theme = createBlockchainTheme(darkMode);
 
@@ -536,13 +555,18 @@ function PlaylistPage() {
                       <Button
                         variant="contained"
                         size="small"
+                        startIcon={<AddIcon />}
+                        onClick={handleOpenMusicSearch}
                         sx={{
                           background: darkMode
                             ? "linear-gradient(135deg, #00e676, #00c853)"
                             : "linear-gradient(135deg, #1976d2, #1565c0)",
+                          "&:hover": {
+                            transform: "scale(1.05)",
+                          },
                         }}
                       >
-                        Add Block
+                        Add Music
                       </Button>
                     )}
                   </Box>
@@ -556,8 +580,13 @@ function PlaylistPage() {
                         No music blocks in this chain yet
                       </Typography>
                       {userPermissions?.permissions?.canEdit && (
-                        <Button variant="outlined" sx={{ mt: 2 }}>
-                          Mine Your First Block
+                        <Button
+                          variant="outlined"
+                          startIcon={<MusicNote />}
+                          onClick={handleOpenMusicSearch}
+                          sx={{ mt: 2 }}
+                        >
+                          Add Your First Song
                         </Button>
                       )}
                     </Box>
@@ -739,6 +768,14 @@ function PlaylistPage() {
             darkMode={darkMode}
           />
         )}
+
+        {/* Music Search Modal */}
+        <MusicSearch
+          open={musicSearchOpen}
+          onClose={handleCloseMusicSearch}
+          playlistId={id}
+          onSongAdded={handleSongAdded}
+        />
       </Box>
     </ThemeProvider>
   );
