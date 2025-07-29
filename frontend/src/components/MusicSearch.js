@@ -143,12 +143,12 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
         duration: song.duration_ms
           ? Math.floor(song.duration_ms / 1000)
           : Math.floor(song.duration || 180), // Ensure integer, default to 3 minutes if no duration
-        spotifyId: song.id || "",
+        ...(song.id && song.id.trim() !== "" && { spotifyId: song.id }),
       };
 
       // For Genius API results, ensure proper data handling
       if (song.source === "genius") {
-        songData.spotifyId = ""; // Genius songs don't have Spotify IDs
+        // Don't include spotifyId for Genius songs - let it be undefined
         songData.duration = 180; // Default duration for Genius songs
       }
 
