@@ -4,7 +4,7 @@ import axios from "axios";
 const api = axios.create({
   baseURL:
     process.env.REACT_APP_API_URL ||
-    "https://collaborative-playlist-backend.onrender.com/api",
+    "http://localhost:5000/api", // Use local backend for development
   headers: {
     "Content-Type": "application/json",
   },
