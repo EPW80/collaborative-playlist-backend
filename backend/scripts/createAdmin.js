@@ -14,9 +14,11 @@ async function createAdminUser() {
   try {
     // Get command line arguments
     const args = process.argv.slice(2);
-    
+
     if (args.length < 3) {
-      console.log("❌ Usage: node scripts/createAdmin.js <username> <email> <password> [role]");
+      console.log(
+        "❌ Usage: node scripts/createAdmin.js <username> <email> <password> [role]"
+      );
       console.log("   Role can be: admin (default) or superadmin");
       process.exit(1);
     }

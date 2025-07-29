@@ -1,49 +1,45 @@
-const express = require('express');
-const { body, param } = require('express-validator');
+const express = require("express");
+const { body, param } = require("express-validator");
 const router = express.Router();
-const auth = require('../middleware/auth');
+const auth = require("../middleware/auth");
 const {
   generatePlaylistNames,
   getSongRecommendations,
   generatePlaylistDescription,
   analyzePlaylist,
   getAIStatus,
-  createSmartPlaylist
-} = require('../controllers/aiController');
+  createSmartPlaylist,
+} = require("../controllers/aiController");
 
 // Validation middleware
 const validatePlaylistId = [
-  param('playlistId').isMongoId().withMessage('Invalid playlist ID')
+  param("playlistId").isMongoId().withMessage("Invalid playlist ID"),
 ];
 
 const validateSongsArray = [
-  body('songs')
+  body("songs")
     .isArray({ min: 1 })
-    .withMessage('Songs array is required and must contain at least one song'),
-  body('songs.*.title')
-    .notEmpty()
-    .withMessage('Song title is required'),
-  body('songs.*.artist')
-    .notEmpty()
-    .withMessage('Song artist is required')
+    .withMessage("Songs array is required and must contain at least one song"),
+  body("songs.*.title").notEmpty().withMessage("Song title is required"),
+  body("songs.*.artist").notEmpty().withMessage("Song artist is required"),
 ];
 
 const validateSmartPlaylistCreation = [
-  body('seeds')
+  body("seeds")
     .isArray({ min: 1 })
-    .withMessage('Seeds array is required for smart playlist creation'),
-  body('autoName')
+    .withMessage("Seeds array is required for smart playlist creation"),
+  body("autoName")
     .optional()
     .isBoolean()
-    .withMessage('autoName must be a boolean'),
-  body('autoDescription')
+    .withMessage("autoName must be a boolean"),
+  body("autoDescription")
     .optional()
     .isBoolean()
-    .withMessage('autoDescription must be a boolean'),
-  body('isPublic')
+    .withMessage("autoDescription must be a boolean"),
+  body("isPublic")
     .optional()
     .isBoolean()
-    .withMessage('isPublic must be a boolean')
+    .withMessage("isPublic must be a boolean"),
 ];
 
 /**
@@ -51,32 +47,29 @@ const validateSmartPlaylistCreation = [
  * @desc    Get AI service status and capabilities
  * @access  Public
  */
-router.get('/status', getAIStatus);
+router.get("/status", getAIStatus);
 
 /**
  * @route   POST /api/ai/generate-names
  * @desc    Generate creative playlist names based on songs
  * @access  Private
  */
-router.post('/generate-names', 
-  auth, 
-  validateSongsArray, 
-  generatePlaylistNames
-);
+router.post("/generate-names", auth, validateSongsArray, generatePlaylistNames);
 
 /**
  * @route   GET /api/ai/recommendations/:playlistId
  * @desc    Get AI-powered song recommendations for a playlist
  * @access  Private
  */
-router.post('/recommendations/:playlistId', 
-  auth, 
+router.post(
+  "/recommendations/:playlistId",
+  auth,
   validatePlaylistId,
   [
-    body('preferences')
+    body("preferences")
       .optional()
       .isObject()
-      .withMessage('Preferences must be an object')
+      .withMessage("Preferences must be an object"),
   ],
   getSongRecommendations
 );
@@ -86,14 +79,15 @@ router.post('/recommendations/:playlistId',
  * @desc    Generate playlist description using AI
  * @access  Private
  */
-router.post('/generate-description/:playlistId', 
-  auth, 
+router.post(
+  "/generate-description/:playlistId",
+  auth,
   validatePlaylistId,
   [
-    body('updatePlaylist')
+    body("updatePlaylist")
       .optional()
       .isBoolean()
-      .withMessage('updatePlaylist must be a boolean')
+      .withMessage("updatePlaylist must be a boolean"),
   ],
   generatePlaylistDescription
 );
@@ -103,20 +97,17 @@ router.post('/generate-description/:playlistId',
  * @desc    Analyze playlist and provide AI insights
  * @access  Private
  */
-router.get('/analyze/:playlistId', 
-  auth, 
-  validatePlaylistId, 
-  analyzePlaylist
-);
+router.get("/analyze/:playlistId", auth, validatePlaylistId, analyzePlaylist);
 
 /**
  * @route   POST /api/ai/smart-playlist
  * @desc    Create a smart playlist with AI assistance
  * @access  Private
  */
-router.post('/smart-playlist', 
-  auth, 
-  validateSmartPlaylistCreation, 
+router.post(
+  "/smart-playlist",
+  auth,
+  validateSmartPlaylistCreation,
   createSmartPlaylist
 );
 

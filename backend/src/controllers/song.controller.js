@@ -129,8 +129,8 @@ exports.addSong = asyncHandler(async (req, res, next) => {
 
     if (existingSong) {
       const duplicateReason =
-        existingSong.spotifyId && 
-        spotifyId && 
+        existingSong.spotifyId &&
+        spotifyId &&
         existingSong.spotifyId === spotifyId.trim()
           ? "This song (same Spotify track)"
           : `"${title}" by ${artist}`;

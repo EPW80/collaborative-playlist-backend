@@ -132,10 +132,13 @@ Format as JSON array with objects containing: title, artist, reason, genre`;
 
       try {
         let content = response.choices[0].message.content;
-        
+
         // Clean up markdown formatting if present
-        content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
-        
+        content = content
+          .replace(/```json\s*/g, "")
+          .replace(/```\s*$/g, "")
+          .trim();
+
         const suggestions = JSON.parse(content);
         return {
           suggestions: Array.isArray(suggestions)
@@ -268,10 +271,13 @@ Provide a JSON response with:
       });
 
       let content = response.choices[0].message.content;
-      
+
       // Clean up markdown formatting if present
-      content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
-      
+      content = content
+        .replace(/```json\s*/g, "")
+        .replace(/```\s*$/g, "")
+        .trim();
+
       return JSON.parse(content);
     } catch (error) {
       console.error("AI playlist analysis failed:", error);

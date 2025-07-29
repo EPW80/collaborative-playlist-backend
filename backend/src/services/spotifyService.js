@@ -177,5 +177,3 @@ class SpotifyService {
 }
 
 module.exports = new SpotifyService();
-
-module.exports = new SpotifyService();

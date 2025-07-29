@@ -1,6 +1,6 @@
-const aiService = require('../services/aiService');
-const Playlist = require('../models/Playlist');
-const { validationResult } = require('express-validator');
+const aiService = require("../services/aiService");
+const Playlist = require("../models/Playlist");
+const { validationResult } = require("express-validator");
 
 /**
  * Generate creative playlist names based on songs
@@ -11,8 +11,8 @@ const generatePlaylistNames = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
-        errors: errors.array()
+        message: "Validation failed",
+        errors: errors.array(),
       });
     }
 
@@ -21,7 +21,7 @@ const generatePlaylistNames = async (req, res) => {
     if (!Array.isArray(songs) || songs.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Songs array is required and must not be empty'
+        message: "Songs array is required and must not be empty",
       });
     }
 
@@ -31,33 +31,33 @@ const generatePlaylistNames = async (req, res) => {
       success: true,
       data: {
         suggestions,
-        aiEnabled: aiService.isAIEnabled()
-      }
+        aiEnabled: aiService.isAIEnabled(),
+      },
     });
   } catch (error) {
-    console.error('Error generating playlist names:', error);
-    
+    console.error("Error generating playlist names:", error);
+
     // Handle specific OpenAI errors
     if (error.status === 429) {
       return res.status(200).json({
         success: true,
         data: {
           suggestions: [
-            'My Awesome Playlist',
-            'Music Mix',
-            'Favorite Tunes',
-            'Daily Vibes',
-            'Sound Collection'
+            "My Awesome Playlist",
+            "Music Mix",
+            "Favorite Tunes",
+            "Daily Vibes",
+            "Sound Collection",
           ],
           aiEnabled: false,
-          message: 'AI quota exceeded. Using fallback suggestions.'
-        }
+          message: "AI quota exceeded. Using fallback suggestions.",
+        },
       });
     }
-    
+
     res.status(500).json({
       success: false,
-      message: 'Failed to generate playlist names'
+      message: "Failed to generate playlist names",
     });
   }
 };
@@ -71,8 +71,8 @@ const getSongRecommendations = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
-        errors: errors.array()
+        message: "Validation failed",
+        errors: errors.array(),
       });
     }
 
@@ -81,31 +81,35 @@ const getSongRecommendations = async (req, res) => {
 
     // Find the playlist
     const playlist = await Playlist.findById(playlistId)
-      .populate('songs')
-      .populate('creator', 'username email');
+      .populate("songs")
+      .populate("creator", "username email");
 
     if (!playlist) {
       return res.status(404).json({
         success: false,
-        message: 'Playlist not found'
+        message: "Playlist not found",
       });
     }
 
     // Check if user has access to the playlist
     const userId = req.user.id;
-    const hasAccess = playlist.creator._id.toString() === userId || 
-                     playlist.collaborators.some(collab => 
-                       collab.user.toString() === userId
-                     );
+    const hasAccess =
+      playlist.creator._id.toString() === userId ||
+      playlist.collaborators.some(
+        (collab) => collab.user.toString() === userId
+      );
 
     if (!hasAccess) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied to this playlist'
+        message: "Access denied to this playlist",
       });
     }
 
-    const recommendations = await aiService.suggestNextSong(playlist, userPreferences);
+    const recommendations = await aiService.suggestNextSong(
+      playlist,
+      userPreferences
+    );
 
     res.json({
       success: true,
@@ -113,14 +117,14 @@ const getSongRecommendations = async (req, res) => {
         ...recommendations,
         playlistId: playlist._id,
         playlistName: playlist.name,
-        aiEnabled: aiService.isAIEnabled()
-      }
+        aiEnabled: aiService.isAIEnabled(),
+      },
     });
   } catch (error) {
-    console.error('Error getting song recommendations:', error);
+    console.error("Error getting song recommendations:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get song recommendations'
+      message: "Failed to get song recommendations",
     });
   }
 };
@@ -134,8 +138,8 @@ const generatePlaylistDescription = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
-        errors: errors.array()
+        message: "Validation failed",
+        errors: errors.array(),
       });
     }
 
@@ -143,28 +147,30 @@ const generatePlaylistDescription = async (req, res) => {
 
     // Find the playlist
     const playlist = await Playlist.findById(playlistId)
-      .populate('songs')
-      .populate('creator', 'username email');
+      .populate("songs")
+      .populate("creator", "username email");
 
     if (!playlist) {
       return res.status(404).json({
         success: false,
-        message: 'Playlist not found'
+        message: "Playlist not found",
       });
     }
 
     // Check if user has edit access
     const userId = req.user.id;
-    const hasEditAccess = playlist.creator._id.toString() === userId || 
-                         playlist.collaborators.some(collab => 
-                           collab.user.toString() === userId && 
-                           ['editor', 'admin'].includes(collab.role)
-                         );
+    const hasEditAccess =
+      playlist.creator._id.toString() === userId ||
+      playlist.collaborators.some(
+        (collab) =>
+          collab.user.toString() === userId &&
+          ["editor", "admin"].includes(collab.role)
+      );
 
     if (!hasEditAccess) {
       return res.status(403).json({
         success: false,
-        message: 'Insufficient permissions to modify playlist'
+        message: "Insufficient permissions to modify playlist",
       });
     }
 
@@ -184,14 +190,14 @@ const generatePlaylistDescription = async (req, res) => {
       data: {
         description,
         updated: !!req.body.updatePlaylist,
-        aiEnabled: aiService.isAIEnabled()
-      }
+        aiEnabled: aiService.isAIEnabled(),
+      },
     });
   } catch (error) {
-    console.error('Error generating playlist description:', error);
+    console.error("Error generating playlist description:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate playlist description'
+      message: "Failed to generate playlist description",
     });
   }
 };
@@ -205,28 +211,29 @@ const analyzePlaylist = async (req, res) => {
 
     // Find the playlist
     const playlist = await Playlist.findById(playlistId)
-      .populate('songs')
-      .populate('creator', 'username email')
-      .populate('collaborators.user', 'username email');
+      .populate("songs")
+      .populate("creator", "username email")
+      .populate("collaborators.user", "username email");
 
     if (!playlist) {
       return res.status(404).json({
         success: false,
-        message: 'Playlist not found'
+        message: "Playlist not found",
       });
     }
 
     // Check if user has access to the playlist
     const userId = req.user.id;
-    const hasAccess = playlist.creator._id.toString() === userId || 
-                     playlist.collaborators.some(collab => 
-                       collab.user._id.toString() === userId
-                     );
+    const hasAccess =
+      playlist.creator._id.toString() === userId ||
+      playlist.collaborators.some(
+        (collab) => collab.user._id.toString() === userId
+      );
 
     if (!hasAccess) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied to this playlist'
+        message: "Access denied to this playlist",
       });
     }
 
@@ -241,16 +248,16 @@ const analyzePlaylist = async (req, res) => {
           name: playlist.name,
           songCount: playlist.songs.length,
           owner: playlist.creator.username,
-          created: playlist.createdAt
+          created: playlist.createdAt,
         },
-        aiEnabled: aiService.isAIEnabled()
-      }
+        aiEnabled: aiService.isAIEnabled(),
+      },
     });
   } catch (error) {
-    console.error('Error analyzing playlist:', error);
+    console.error("Error analyzing playlist:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to analyze playlist'
+      message: "Failed to analyze playlist",
     });
   }
 };
@@ -261,16 +268,16 @@ const analyzePlaylist = async (req, res) => {
 const getAIStatus = async (req, res) => {
   try {
     const status = aiService.getStatus();
-    
+
     res.json({
       success: true,
-      data: status
+      data: status,
     });
   } catch (error) {
-    console.error('Error getting AI status:', error);
+    console.error("Error getting AI status:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get AI status'
+      message: "Failed to get AI status",
     });
   }
 };
@@ -284,26 +291,31 @@ const createSmartPlaylist = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
-        errors: errors.array()
+        message: "Validation failed",
+        errors: errors.array(),
       });
     }
 
-    const { seeds, preferences = {}, autoName = true, autoDescription = true } = req.body;
+    const {
+      seeds,
+      preferences = {},
+      autoName = true,
+      autoDescription = true,
+    } = req.body;
     const userId = req.user.id;
 
     // Seeds can be song IDs, artist names, or genre preferences
     if (!seeds || seeds.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Seeds are required for smart playlist creation'
+        message: "Seeds are required for smart playlist creation",
       });
     }
 
     // This would integrate with music services to find songs based on seeds
     // For now, we'll create a basic playlist structure
-    let playlistName = 'Smart Playlist';
-    let description = 'AI-generated playlist based on your preferences';
+    let playlistName = "Smart Playlist";
+    let description = "AI-generated playlist based on your preferences";
 
     // Generate AI name if requested
     if (autoName && seeds.length > 0) {
@@ -311,14 +323,14 @@ const createSmartPlaylist = async (req, res) => {
         const nameOptions = await aiService.generatePlaylistName(seeds);
         playlistName = nameOptions[0] || playlistName;
       } catch (error) {
-        console.warn('Failed to generate AI playlist name:', error);
+        console.warn("Failed to generate AI playlist name:", error);
       }
     }
 
     // Create the playlist
     const playlist = new Playlist({
       name: playlistName,
-      description: autoDescription ? description : req.body.description || '',
+      description: autoDescription ? description : req.body.description || "",
       creator: userId,
       songs: [], // Would be populated with recommended songs
       tags: preferences.genres || [],
@@ -327,8 +339,8 @@ const createSmartPlaylist = async (req, res) => {
       aiSeedData: {
         seeds,
         preferences,
-        createdAt: new Date()
-      }
+        createdAt: new Date(),
+      },
     });
 
     await playlist.save();
@@ -338,14 +350,15 @@ const createSmartPlaylist = async (req, res) => {
       data: {
         playlist,
         aiEnabled: aiService.isAIEnabled(),
-        message: 'Smart playlist created. Add songs or use AI recommendations to populate it.'
-      }
+        message:
+          "Smart playlist created. Add songs or use AI recommendations to populate it.",
+      },
     });
   } catch (error) {
-    console.error('Error creating smart playlist:', error);
+    console.error("Error creating smart playlist:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create smart playlist'
+      message: "Failed to create smart playlist",
     });
   }
 };
@@ -356,5 +369,5 @@ module.exports = {
   generatePlaylistDescription,
   analyzePlaylist,
   getAIStatus,
-  createSmartPlaylist
+  createSmartPlaylist,
 };

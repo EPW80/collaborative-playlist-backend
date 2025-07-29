@@ -12,7 +12,7 @@ const connectDB = require("../src/config/database");
 async function checkUser() {
   try {
     const args = process.argv.slice(2);
-    
+
     if (args.length < 1) {
       console.log("❌ Usage: node scripts/checkUser.js <email> [password]");
       process.exit(1);
@@ -26,22 +26,22 @@ async function checkUser() {
 
     // Find user by email
     const user = await User.findOne({ email });
-    
+
     if (!user) {
       console.log(`❌ User not found with email: ${email}`);
-      
+
       // Check for similar emails
       const similarUsers = await User.find({
-        email: { $regex: email.split('@')[0], $options: 'i' }
-      }).select('email username role');
-      
+        email: { $regex: email.split("@")[0], $options: "i" },
+      }).select("email username role");
+
       if (similarUsers.length > 0) {
         console.log("🔍 Found similar users:");
-        similarUsers.forEach(u => {
+        similarUsers.forEach((u) => {
           console.log(`   - ${u.username} (${u.email}) - Role: ${u.role}`);
         });
       }
-      
+
       process.exit(1);
     }
 
@@ -55,7 +55,7 @@ async function checkUser() {
     // Test password if provided
     if (password) {
       const isMatch = await user.comparePassword(password);
-      console.log(`🔐 Password check: ${isMatch ? '✅ Valid' : '❌ Invalid'}`);
+      console.log(`🔐 Password check: ${isMatch ? "✅ Valid" : "❌ Invalid"}`);
     }
 
     process.exit(0);
