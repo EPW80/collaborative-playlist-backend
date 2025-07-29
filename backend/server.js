@@ -25,8 +25,7 @@ const io = socketIO(server, {
       process.env.FRONTEND_URL || "http://localhost:3000",
       "http://localhost:3000",
       "http://localhost:3001",
-      "https://collaborative-playlist-manager.vercel.app",
-      "https://frontend-1nwbhkxc8-epws-projects.vercel.app"
+      "https://frontend-pwe6ouxg7-epws-projects.vercel.app"
     ],
     methods: ["GET", "POST"],
     credentials: true,
@@ -46,8 +45,7 @@ app.use(
       process.env.FRONTEND_URL || "http://localhost:3000",
       "http://localhost:3000",
       "http://localhost:3001",
-      "https://collaborative-playlist-manager.vercel.app",
-      "https://frontend-1nwbhkxc8-epws-projects.vercel.app",
+      "https://frontend-pwe6ouxg7-epws-projects.vercel.app",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
