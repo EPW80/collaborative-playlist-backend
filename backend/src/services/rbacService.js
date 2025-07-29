@@ -317,6 +317,7 @@ class RBACService {
     const playlist = await Playlist.findById(playlistId).populate([
       { path: "creator", select: "username email" },
       { path: "collaborators.user", select: "username email" },
+      { path: "songs" }, // Populate the songs array
     ]);
 
     if (!playlist) {
