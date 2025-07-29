@@ -25,7 +25,8 @@ const io = socketIO(server, {
       process.env.FRONTEND_URL || "http://localhost:3000",
       "http://localhost:3000",
       "http://localhost:3001",
-      "https://frontend-pwe6ouxg7-epws-projects.vercel.app"
+      "https://frontend-pwe6ouxg7-epws-projects.vercel.app",
+      "https://frontend-dr5de4z33-epws-projects.vercel.app"
     ],
     methods: ["GET", "POST"],
     credentials: true,
@@ -46,6 +47,7 @@ app.use(
       "http://localhost:3000",
       "http://localhost:3001",
       "https://frontend-pwe6ouxg7-epws-projects.vercel.app",
+      "https://frontend-dr5de4z33-epws-projects.vercel.app",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
