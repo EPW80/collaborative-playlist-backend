@@ -62,3 +62,8 @@ yarn.lock
 setup-redis.sh
 /redis-monitor.sh
 redis-monitor.sh
+
+# Deployment files with sensitive data
+render-env-vars.txt
+.env.production
+update-cors.sh
