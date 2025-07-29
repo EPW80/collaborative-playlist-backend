@@ -6,6 +6,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true, // Enable sending cookies and credentials with CORS requests
 });
 
 // Request interceptor to add auth token
@@ -26,6 +27,18 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Log network errors for debugging
+    if (error.code === 'ERR_NETWORK') {
+      console.error('🌐 Network Error - Backend server may be down or CORS issue:', {
+        message: error.message,
+        config: {
+          baseURL: error.config?.baseURL,
+          url: error.config?.url,
+          method: error.config?.method
+        }
+      });
+    }
+    
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");

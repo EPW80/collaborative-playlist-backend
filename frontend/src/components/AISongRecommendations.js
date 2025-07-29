@@ -82,18 +82,24 @@ const AISongRecommendations = ({
           artist: "AI Assistant",
           reason: "A curated selection based on your playlist style",
           genre: "Mixed",
+          duration: 195, // 3:15
+          album: "AI Recommendations",
         },
         {
           title: "Similar Artists Radio",
           artist: "Various Artists",
           reason: "Explore artists with similar musical styles",
           genre: "Similar",
+          duration: 210, // 3:30
+          album: "AI Recommendations",
         },
         {
           title: "Mood-Based Selection",
           artist: "AI Curator",
           reason: "Songs that match the energy and mood of your playlist",
           genre: "Matched Mood",
+          duration: 225, // 3:45
+          album: "AI Recommendations",
         },
       ]);
       setReasoning(
@@ -126,9 +132,11 @@ const AISongRecommendations = ({
         Song Recommendations
         <Box sx={{ flexGrow: 1 }} />
         <Tooltip title="Get new recommendations">
-          <IconButton onClick={getRecommendations} disabled={loading}>
-            <RefreshIcon />
-          </IconButton>
+          <span>
+            <IconButton onClick={getRecommendations} disabled={loading}>
+              <RefreshIcon />
+            </IconButton>
+          </span>
         </Tooltip>
         <IconButton onClick={onClose}>
           <CloseIcon />

@@ -374,4 +374,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**🎵 Built with ❤️ for music lovers and collaborative teams**
+**🎵 Built with 💀 for music lovers and collaborative teams**

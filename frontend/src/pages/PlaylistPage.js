@@ -69,6 +69,7 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import { playlistAPI, songAPI, rbacAPI } from "../services/api";
 import socketService from "../services/websocket";
+import { AudioManager } from "../utils/audioManager";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import MusicSearch from "../components/MusicSearch";
 import AIFeaturesPanel from "../components/AIFeaturesPanel";
@@ -404,6 +405,26 @@ function PlaylistPage() {
   // Track current audio operation to allow cancellation
   const currentAudioOperation = useRef(null);
 
+  // Audio manager for optimized audio handling
+  const audioManager = useRef(new AudioManager());
+
+  // Ref to store debounce timeout
+  const playlistUpdateTimeoutRef = useRef(null);
+
+  // Debounced playlist update function to prevent excessive re-renders
+  const debouncedPlaylistUpdate = useCallback((updatedPlaylist) => {
+    // Clear existing timeout
+    if (playlistUpdateTimeoutRef.current) {
+      clearTimeout(playlistUpdateTimeoutRef.current);
+    }
+    
+    // Set new timeout for batched update
+    playlistUpdateTimeoutRef.current = setTimeout(() => {
+      setPlaylist(updatedPlaylist);
+      playlistUpdateTimeoutRef.current = null;
+    }, 100);
+  }, []);
+
   // Helper functions
   const showSnackbar = useCallback((message, severity = "success") => {
     setSnackbar({ open: true, message, severity });
@@ -494,14 +515,34 @@ function PlaylistPage() {
     setSongMenuAnchor(null);
   }, [userPermissions?.permissions, userPermissions?.role]);
 
+  // Close song menu if selected song is no longer in playlist
+  useEffect(() => {
+    if (selectedSong && playlist?.songs) {
+      const selectedSongId = selectedSong._id || selectedSong.id;
+      const songStillExists = playlist.songs.some(song => {
+        const songId = song._id || song.id;
+        return songId === selectedSongId;
+      });
+      
+      if (!songStillExists) {
+        console.debug("Selected song no longer in playlist, closing menu");
+        setSongMenuAnchor(null);
+        setSelectedSong(null);
+      }
+    }
+  }, [playlist?.songs, selectedSong]);
+
   // Safety cleanup for invalid anchor elements
   useEffect(() => {
     const checkAnchors = () => {
       if (menuAnchor && !menuAnchor.isConnected) {
+        console.debug("Cleaning up disconnected main menu anchor");
         setMenuAnchor(null);
       }
       if (songMenuAnchor && !songMenuAnchor.isConnected) {
+        console.debug("Cleaning up disconnected song menu anchor");
         setSongMenuAnchor(null);
+        setSelectedSong(null); // Also clear selected song when anchor is invalid
       }
     };
 
@@ -632,7 +673,24 @@ function PlaylistPage() {
             ? Object.keys(selectedSong)
             : "selectedSong is null/undefined"
         );
-        showSnackbar("Failed to remove song: Invalid song ID", "error");
+        
+        // Check if this might be an AI-recommended song without ID
+        if (selectedSong && !selectedSong._id && !selectedSong.id) {
+          showSnackbar(
+            "Cannot remove this song. It may not have been properly saved to the database. Please refresh the page and try again.",
+            "error"
+          );
+        } else {
+          showSnackbar("Failed to remove song: Invalid song ID", "error");
+        }
+        return;
+      }
+
+      // Additional safety check: ensure the menu anchor is still valid
+      if (songMenuAnchor && !songMenuAnchor.isConnected) {
+        console.warn("Song menu anchor is no longer connected, aborting deletion");
+        setSongMenuAnchor(null);
+        setSelectedSong(null);
         return;
       }
 
@@ -653,6 +711,11 @@ function PlaylistPage() {
       console.log("Selected song object:", selectedSong);
 
       await songAPI.remove(songId, id);
+      
+      // Close the menu immediately after successful deletion to prevent anchor element issues
+      setSongMenuAnchor(null);
+      setSelectedSong(null);
+      
       setPlaylist((prev) => ({
         ...prev,
         songs: prev.songs.filter((song) => {
@@ -660,11 +723,13 @@ function PlaylistPage() {
           return currentSongId !== songId;
         }),
       }));
-      setSongMenuAnchor(null);
-      setSelectedSong(null);
+      
       showSnackbar("Song removed from playlist!");
     } catch (error) {
       console.error("Error removing song:", error);
+      // Ensure menu is closed even on error
+      setSongMenuAnchor(null);
+      setSelectedSong(null);
       showSnackbar("Failed to remove song", "error");
     }
   };
@@ -837,10 +902,58 @@ function PlaylistPage() {
     }
   };
 
-  const handleSongRecommended = (song) => {
-    // Add recommended song to playlist
-    addSongToPlaylist(song, "ai-recommendation");
-    setShowRecommendations(false);
+  const handleSongRecommended = async (song) => {
+    try {
+      // Create a proper song object for the API
+      const songData = {
+        title: song.title,
+        artist: song.artist,
+        album: song.album || "Unknown Album",
+        // Use a reasonable default duration since backend validation requires it to be truthy
+        // 210 seconds = 3 minutes 30 seconds (average song length)
+        duration: song.duration || 210,
+        playlistId: id,
+        // For AI recommendations, we might not have Spotify ID or external URL
+        spotifyId: song.spotifyId || "",
+        externalUrl: song.externalUrl || "",
+        // Mark as AI-recommended with additional metadata
+        metadata: {
+          aiRecommended: true,
+          aiReason: song.reason,
+          genre: song.genre,
+          source: "ai-recommendation",
+          estimatedDuration: !song.duration, // Flag if duration is estimated
+          ...(song.metadata || {})
+        }
+      };
+
+      console.log("🤖 Adding AI-recommended song via API:", songData);
+      
+      // Add song through the API to get proper ID
+      const response = await songAPI.add(songData);
+      const addedSong = response.data.data.song;
+      
+      console.log("✅ AI-recommended song added with ID:", addedSong._id);
+      
+      // Add to playlist state with the proper ID from API response
+      addSongToPlaylist(addedSong, "ai-recommendation-api");
+      setShowRecommendations(false);
+      showSnackbar(`Added "${song.title}" by ${song.artist} to playlist!`);
+    } catch (error) {
+      console.error("❌ Error adding AI-recommended song:", error);
+      
+      // Provide more specific error messaging
+      const errorMessage = error.response?.data?.message || error.message || "Unknown error";
+      if (errorMessage.includes("already exists")) {
+        showSnackbar("This song is already in your playlist", "warning");
+      } else if (errorMessage.includes("permission")) {
+        showSnackbar("You don't have permission to add songs to this playlist", "error");
+      } else if (errorMessage.includes("required")) {
+        showSnackbar("Invalid song data - please try a different recommendation", "error");
+      } else {
+        showSnackbar(`Failed to add recommended song: ${errorMessage}`, "error");
+      }
+    }
   };
 
   const theme = createBlockchainTheme(darkMode);
@@ -882,13 +995,14 @@ function PlaylistPage() {
         // Join playlist room for real-time updates
         socketService.joinPlaylist(id);
 
-        // Set up real-time listeners with animations
+        // Set up real-time listeners with optimized updates
         socketService.onPlaylistUpdate((updatedPlaylist) => {
           // Ensure songs is always an array
           if (!updatedPlaylist.songs) {
             updatedPlaylist.songs = [];
           }
-          setPlaylist(updatedPlaylist);
+          // Use debounced update to prevent excessive re-renders
+          debouncedPlaylistUpdate(updatedPlaylist);
         });
 
         socketService.onSongAdded((data) => {
@@ -913,11 +1027,24 @@ function PlaylistPage() {
 
     loadPlaylist();
 
+    // Store audio manager reference for cleanup
+    const currentAudioManager = audioManager.current;
+
     return () => {
       socketService.leavePlaylist(id);
       socketService.removeAllListeners();
+      
+      // Clean up audio manager resources
+      if (currentAudioManager) {
+        currentAudioManager.dispose();
+      }
+      
+      // Clean up any pending playlist update timeout
+      if (playlistUpdateTimeoutRef.current) {
+        clearTimeout(playlistUpdateTimeoutRef.current);
+      }
     };
-  }, [id, addSongToPlaylist]);
+  }, [id, addSongToPlaylist, debouncedPlaylistUpdate]);
 
   const getRoleBadgeColor = (role) => {
     const colors = {
@@ -947,13 +1074,11 @@ function PlaylistPage() {
     }
 
     // Cancel any ongoing audio operation
-    if (currentAudioOperation.current) {
-      currentAudioOperation.current.abort();
-    }
+    audioManager.current.cancelCurrentOperation();
 
     // Create new AbortController for this operation
     const abortController = new AbortController();
-    currentAudioOperation.current = abortController;
+    audioManager.current.currentOperation = abortController;
 
     // Prevent concurrent audio operations
     if (isAudioOperationInProgress.current) {
@@ -969,47 +1094,42 @@ function PlaylistPage() {
         audioRef.current.currentTime = 0;
         setIsPlaying(false);
 
-        // Wait for pause to complete and check if operation was cancelled
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Reduced wait time for better responsiveness
+        await new Promise((resolve) => setTimeout(resolve, 50));
         if (abortController.signal.aborted) return;
       }
 
       setCurrentSong(song);
       setIsLoading(true);
 
-      // Try to find a preview URL for the song
+      // Determine audio URL with priority order
       let audioUrl = null;
+      let audioType = "unknown";
 
-      // Check if song has metadata with preview URL
       if (song.metadata?.previewUrl) {
         audioUrl = song.metadata.previewUrl;
+        audioType = "preview";
         console.log("🎧 Using song preview URL:", audioUrl);
         showSnackbar(
           `Playing preview for "${song.title}" by ${song.artist}`,
           "info"
         );
-      }
-      // For Spotify songs without preview, use a demo audio
-      else if (song.spotifyId) {
+      } else if (song.spotifyId) {
+        audioUrl = "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3";
+        audioType = "demo_spotify";
         console.log("🎧 Using demo audio for Spotify song without preview");
         showSnackbar(
           `Preview not available for "${song.title}" - playing demo audio`,
           "warning"
         );
-        // Use a reliable demo audio file
-        audioUrl =
-          "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3";
-      }
-      // For other sources, use demo audio
-      else {
+      } else {
+        audioUrl = "https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg";
+        audioType = "demo_other";
         console.log("🎧 Using demo audio for non-Spotify song");
         showSnackbar(
           `Playing demo audio for "${song.title}" by ${song.artist}`,
           "warning"
         );
-        // Use a different demo audio file for variety
-        audioUrl =
-          "https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg";
       }
 
       if (!audioUrl) {
@@ -1018,101 +1138,54 @@ function PlaylistPage() {
         return;
       }
 
-      console.log("🔗 Final audio URL:", audioUrl);
+      console.log(`🔗 Loading ${audioType} audio:`, audioUrl);
 
-      // Check if operation was cancelled before proceeding
-      if (abortController.signal.aborted) return;
+      // Use optimized audio loading
+      await audioManager.current.loadAudio(audioRef.current, audioUrl, abortController);
 
-      // Reset and load new audio source
-      audioRef.current.src = audioUrl;
-      audioRef.current.currentTime = 0;
-
-      // Wait for audio to be ready with cancellation support
-      await new Promise((resolve, reject) => {
-        if (abortController.signal.aborted) {
-          reject(new Error("Operation cancelled"));
-          return;
-        }
-
-        const timeout = setTimeout(() => {
-          cleanup();
-          reject(new Error("Audio loading timeout"));
-        }, 8000);
-
-        const cleanup = () => {
-          clearTimeout(timeout);
-          audioRef.current.removeEventListener("canplay", onCanPlay);
-          audioRef.current.removeEventListener("error", onError);
-        };
-
-        const onCanPlay = () => {
-          cleanup();
-          resolve();
-        };
-
-        const onError = (error) => {
-          cleanup();
-          reject(error);
-        };
-
-        // Handle cancellation
-        abortController.signal.addEventListener("abort", () => {
-          cleanup();
-          reject(new Error("Operation cancelled"));
-        });
-
-        audioRef.current.addEventListener("canplay", onCanPlay, { once: true });
-        audioRef.current.addEventListener("error", onError, { once: true });
-
-        // Trigger loading
-        audioRef.current.load();
-      });
-
-      // Final check before playing
+      // Check if operation was cancelled
       if (abortController.signal.aborted) return;
 
       console.log("▶️ Attempting to play audio...");
-      // Play the audio
-      try {
-        await audioRef.current.play();
-        console.log("✅ Audio play() successful");
-        // Only update state if operation wasn't cancelled
-        if (!abortController.signal.aborted) {
-          setIsPlaying(true);
-          console.log("✅ Audio state updated to playing");
-        }
-      } catch (playError) {
-        console.error("❌ Audio play() failed:", playError);
-        // If this specific operation was cancelled, don't show error
-        if (abortController.signal.aborted) return;
-        throw playError;
+      
+      // Use optimized audio playing
+      await audioManager.current.playAudio(audioRef.current, abortController);
+      
+      console.log("✅ Audio play() successful");
+      
+      // Only update state if operation wasn't cancelled
+      if (!abortController.signal.aborted) {
+        setIsPlaying(true);
+        console.log("✅ Audio state updated to playing");
       }
     } catch (error) {
       // Don't log errors for cancelled operations
-      if (
-        abortController.signal.aborted ||
-        error.message === "Operation cancelled"
-      ) {
+      if (abortController.signal.aborted || error.message === "Operation cancelled") {
+        console.debug("🔄 Audio operation cancelled");
         return;
       }
 
-      console.error("Error playing audio:", error);
-
-      // Filter out common browser errors
-      if (error.name !== "AbortError" && error.name !== "NotAllowedError") {
-        showSnackbar(
-          "Failed to play audio. Preview may not be available.",
-          "error"
-        );
+      console.error("❌ Error in handleSongPlay:", error);
+      
+      // Provide user-friendly error messages
+      let userMessage = "Failed to play audio";
+      if (error.message.includes("Autoplay prevented")) {
+        userMessage = "Click play again - browser requires user interaction";
+      } else if (error.message.includes("not supported")) {
+        userMessage = "Audio format not supported by your browser";
+      } else if (error.message.includes("timeout")) {
+        userMessage = "Audio loading timed out - please try again";
       }
+      
+      showSnackbar(userMessage, "error");
       setIsPlaying(false);
     } finally {
-      // Only reset states if this operation wasn't superseded
-      if (currentAudioOperation.current === abortController) {
-        setIsLoading(false);
-        isAudioOperationInProgress.current = false;
-        currentAudioOperation.current = null;
+      // Reset operation flags
+      isAudioOperationInProgress.current = false;
+      if (audioManager.current.currentOperation === abortController) {
+        audioManager.current.currentOperation = null;
       }
+      setIsLoading(false);
     }
   };
 
@@ -1671,6 +1744,15 @@ function PlaylistPage() {
           onClose={() => setMenuAnchor(null)}
           disablePortal={false}
           keepMounted={false}
+          slotProps={{
+            root: {
+              // Additional safety to prevent menu positioning errors
+              onError: (error) => {
+                console.warn("Playlist menu error, closing menu:", error);
+                setMenuAnchor(null);
+              }
+            }
+          }}
         >
           <MenuItem onClick={handleEditPlaylist}>
             <EditIcon sx={{ mr: 1 }} />
@@ -1693,10 +1775,23 @@ function PlaylistPage() {
         {/* Song Actions Menu */}
         <Menu
           anchorEl={songMenuAnchor}
-          open={Boolean(songMenuAnchor) && songMenuAnchor?.isConnected}
-          onClose={() => setSongMenuAnchor(null)}
+          open={Boolean(songMenuAnchor) && songMenuAnchor?.isConnected && Boolean(selectedSong)}
+          onClose={() => {
+            setSongMenuAnchor(null);
+            setSelectedSong(null);
+          }}
           disablePortal={false}
           keepMounted={false}
+          slotProps={{
+            root: {
+              // Additional safety to prevent menu positioning errors
+              onError: (error) => {
+                console.warn("Song menu error, closing menu:", error);
+                setSongMenuAnchor(null);
+                setSelectedSong(null);
+              }
+            }
+          }}
         >
           {selectedSong &&
             (userPermissions?.permissions?.canRemoveSongs ||

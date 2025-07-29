@@ -5,6 +5,7 @@ node_modules/
 .env.*.local
 .env.redis
 .env.production.example
+.env.example
 
 # Logs
 logs

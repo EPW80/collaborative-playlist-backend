@@ -1,9 +1,24 @@
 import { io } from "socket.io-client";
+import { debounce, throttle, batchUpdates } from "../utils/debounce";
 
 class SocketService {
   constructor() {
     this.socket = null;
     this.connected = false;
+    this.messageQueue = [];
+    this.isProcessingQueue = false;
+    
+    // Debounced handlers to prevent rapid-fire updates
+    this.debouncedHandlers = new Map();
+    
+    // Batch update functionality
+    this.playlistUpdateBatch = batchUpdates((updates) => {
+      // Process all playlist updates in a single batch
+      const latestUpdate = updates[updates.length - 1];
+      if (this.playlistUpdateCallback) {
+        this.playlistUpdateCallback(latestUpdate);
+      }
+    }, 50); // 50ms batch window
   }
 
   connect(token) {
@@ -88,34 +103,69 @@ class SocketService {
     }
   }
 
-  // Real-time playlist updates
+  // Real-time playlist updates with optimized batching
   onPlaylistUpdate(callback) {
     if (this.socket) {
-      this.socket.on("playlist-updated", callback);
+      // Store the callback for batch processing
+      this.playlistUpdateCallback = callback;
+      
+      // Use throttled handler to prevent excessive updates
+      const throttledHandler = throttle((data) => {
+        // Use requestIdleCallback if available for better performance
+        if (window.requestIdleCallback) {
+          window.requestIdleCallback(() => {
+            this.playlistUpdateBatch(data);
+          }, { timeout: 100 });
+        } else {
+          // Fallback to setTimeout for browsers without requestIdleCallback
+          setTimeout(() => {
+            this.playlistUpdateBatch(data);
+          }, 0);
+        }
+      }, 100); // Limit to once per 100ms
+      
+      this.socket.on("playlist-updated", throttledHandler);
     }
   }
 
   onSongAdded(callback) {
     if (this.socket) {
-      this.socket.on("song-added", callback);
+      // Debounce song additions to handle rapid-fire additions
+      const debouncedCallback = debounce((data) => {
+        // Process in next tick to avoid blocking
+        setTimeout(() => callback(data), 0);
+      }, 150);
+      this.socket.on("song-added", debouncedCallback);
     }
   }
 
   onSongRemoved(callback) {
     if (this.socket) {
-      this.socket.on("song-removed", callback);
+      // Debounce song removals
+      const debouncedCallback = debounce((data) => {
+        setTimeout(() => callback(data), 0);
+      }, 150);
+      this.socket.on("song-removed", debouncedCallback);
     }
   }
 
   onCollaboratorAdded(callback) {
     if (this.socket) {
-      this.socket.on("collaborator-added", callback);
+      // Throttle collaborator updates
+      const throttledCallback = throttle((data) => {
+        setTimeout(() => callback(data), 0);
+      }, 200);
+      this.socket.on("collaborator-added", throttledCallback);
     }
   }
 
   onCollaboratorRemoved(callback) {
     if (this.socket) {
-      this.socket.on("collaborator-removed", callback);
+      // Throttle collaborator updates
+      const throttledCallback = throttle((data) => {
+        setTimeout(() => callback(data), 0);
+      }, 200);
+      this.socket.on("collaborator-removed", throttledCallback);
     }
   }
 
