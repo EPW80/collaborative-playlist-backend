@@ -100,7 +100,20 @@ exports.addSong = asyncHandler(async (req, res, next) => {
     });
 
     if (existingSong) {
-      return next(new AppError("Song already exists in playlist", 400));
+      return res.status(400).json({
+        success: false,
+        error: "Song already exists in playlist",
+        message: `"${title}" by ${artist} is already in this playlist`,
+        code: "DUPLICATE_SONG",
+        data: {
+          existingSong: {
+            id: existingSong._id,
+            title: existingSong.title,
+            artist: existingSong.artist,
+            addedAt: existingSong.addedAt
+          }
+        }
+      });
     }
   }
 

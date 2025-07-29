@@ -4,6 +4,7 @@
  */
 
 const Playlist = require("../models/Playlist");
+const User = require("../models/User");
 const { AppError } = require("../middleware/errorHandler");
 
 /**
@@ -26,8 +27,8 @@ class RBACService {
       viewer: {
         canView: true,
         canSuggest: false,
-        canAddSongs: false,     // Viewers cannot add songs
-        canRemoveSongs: false,  // Viewers cannot remove songs
+        canAddSongs: false, // Viewers cannot add songs
+        canRemoveSongs: false, // Viewers cannot remove songs
         canEdit: false,
         canManageCollaborators: false,
         canDelete: false,
@@ -38,8 +39,8 @@ class RBACService {
       contributor: {
         canView: true,
         canSuggest: true,
-        canAddSongs: true,      // Contributors can add songs
-        canRemoveSongs: true,   // Contributors can remove songs  
+        canAddSongs: true, // Contributors can add songs
+        canRemoveSongs: true, // Contributors can remove songs
         canEdit: false,
         canManageCollaborators: false,
         canDelete: false,
@@ -50,8 +51,8 @@ class RBACService {
       editor: {
         canView: true,
         canSuggest: true,
-        canAddSongs: true,      // Editors can add songs
-        canRemoveSongs: true,   // Editors can remove songs
+        canAddSongs: true, // Editors can add songs
+        canRemoveSongs: true, // Editors can remove songs
         canEdit: true,
         canManageCollaborators: false,
         canDelete: false,
@@ -62,8 +63,8 @@ class RBACService {
       admin: {
         canView: true,
         canSuggest: true,
-        canAddSongs: true,      // Admins can add songs
-        canRemoveSongs: true,   // Admins can remove songs
+        canAddSongs: true, // Admins can add songs
+        canRemoveSongs: true, // Admins can remove songs
         canEdit: true,
         canManageCollaborators: true,
         canDelete: false,
@@ -74,8 +75,8 @@ class RBACService {
       owner: {
         canView: true,
         canSuggest: true,
-        canAddSongs: true,      // Owners can add songs
-        canRemoveSongs: true,   // Owners can remove songs
+        canAddSongs: true, // Owners can add songs
+        canRemoveSongs: true, // Owners can remove songs
         canEdit: true,
         canManageCollaborators: true,
         canDelete: true,
@@ -94,14 +95,22 @@ class RBACService {
    */
   getUserRole(userId, playlist) {
     // Owner has highest privileges
-    if (playlist.creator.toString() === userId) {
+    // Handle both populated and non-populated creator field
+    const creatorId = playlist.creator._id
+      ? playlist.creator._id.toString()
+      : playlist.creator.toString();
+    if (creatorId === userId) {
       return "owner";
     }
 
     // Find user in collaborators
-    const collaborator = playlist.collaborators.find(
-      (collab) => collab.user.toString() === userId
-    );
+    const collaborator = playlist.collaborators.find((collab) => {
+      // Handle both populated and non-populated user field
+      const collabUserId = collab.user._id
+        ? collab.user._id.toString()
+        : collab.user.toString();
+      return collabUserId === userId;
+    });
 
     if (collaborator) {
       return collaborator.role;
@@ -125,7 +134,7 @@ class RBACService {
    */
   hasPermission(userId, playlist, permission) {
     const userRole = this.getUserRole(userId, playlist);
-    
+
     if (!userRole) {
       return false;
     }
@@ -152,7 +161,7 @@ class RBACService {
    */
   async validatePermission(userId, playlistId, permission) {
     const playlist = await Playlist.findById(playlistId);
-    
+
     if (!playlist) {
       throw new AppError("Playlist not found", 404);
     }
@@ -160,7 +169,9 @@ class RBACService {
     if (!this.hasPermission(userId, playlist, permission)) {
       const userRole = this.getUserRole(userId, playlist);
       throw new AppError(
-        `Access denied. Required permission: ${permission}. Your role: ${userRole || "none"}`,
+        `Access denied. Required permission: ${permission}. Your role: ${
+          userRole || "none"
+        }`,
         403
       );
     }
@@ -176,7 +187,7 @@ class RBACService {
    */
   getUserPermissions(userId, playlist) {
     const userRole = this.getUserRole(userId, playlist);
-    
+
     if (!userRole) {
       return {};
     }
@@ -313,7 +324,7 @@ class RBACService {
     }
 
     const userRole = this.getUserRole(userId, playlist);
-    
+
     if (!userRole) {
       throw new AppError(
         "Access denied. You need to be invited to access this private playlist.",

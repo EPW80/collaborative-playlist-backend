@@ -218,40 +218,50 @@ router.post("/logout", auth, async (req, res, next) => {
   try {
     const userId = req.user.id;
 
-    // Update user status to offline
-    await cacheService.set(
-      cacheService.keys.userStatus(userId),
-      {
-        status: "offline",
-        lastActivity: new Date(),
-        currentPlaylist: null,
-      },
-      3600
-    );
+    // Update user status to offline (with error handling)
+    try {
+      await cacheService.set(
+        cacheService.keys.userStatus(userId),
+        {
+          status: "offline",
+          lastActivity: new Date(),
+          currentPlaylist: null,
+        },
+        3600
+      );
+    } catch (cacheError) {
+      console.warn("Cache service error during logout:", cacheError.message);
+      // Continue with logout even if cache fails
+    }
 
-    // Cleanup real-time sessions
-    const realtimeService = req.app.get("realtimeService");
-    if (realtimeService && realtimeService.connectedUsers.has(userId)) {
-      const userData = realtimeService.connectedUsers.get(userId);
-      if (userData && userData.playlistId) {
-        // Remove from playlist session
-        const playlistId = userData.playlistId;
-        if (realtimeService.playlistSessions.has(playlistId)) {
-          realtimeService.playlistSessions.get(playlistId).delete(userId);
+    // Cleanup real-time sessions (with error handling)
+    try {
+      const realtimeService = req.app.get("realtimeService");
+      if (realtimeService && realtimeService.connectedUsers.has(userId)) {
+        const userData = realtimeService.connectedUsers.get(userId);
+        if (userData && userData.playlistId) {
+          // Remove from playlist session
+          const playlistId = userData.playlistId;
+          if (realtimeService.playlistSessions.has(playlistId)) {
+            realtimeService.playlistSessions.get(playlistId).delete(userId);
+          }
+
+          // Notify other users
+          const io = req.app.get("io");
+          if (io) {
+            io.to(`playlist-${playlistId}`).emit("user-logged-out", {
+              userId,
+              timestamp: new Date(),
+            });
+          }
         }
 
-        // Notify other users
-        const io = req.app.get("io");
-        if (io) {
-          io.to(`playlist-${playlistId}`).emit("user-logged-out", {
-            userId,
-            timestamp: new Date(),
-          });
-        }
+        // Remove from connected users
+        realtimeService.connectedUsers.delete(userId);
       }
-
-      // Remove from connected users
-      realtimeService.connectedUsers.delete(userId);
+    } catch (realtimeError) {
+      console.warn("Real-time service error during logout:", realtimeError.message);
+      // Continue with logout even if real-time cleanup fails
     }
 
     res.json({
@@ -259,6 +269,7 @@ router.post("/logout", auth, async (req, res, next) => {
       message: "Logout successful",
     });
   } catch (error) {
+    console.error("Logout error:", error);
     next(error);
   }
 });

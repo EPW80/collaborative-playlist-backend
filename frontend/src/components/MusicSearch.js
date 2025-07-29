@@ -29,11 +29,12 @@ import {
 } from "@mui/icons-material";
 import { searchAPI, songAPI, lyricsAPI } from "../services/api";
 
-function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
+function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [errorSeverity, setErrorSeverity] = useState("error");
   const [tabValue, setTabValue] = useState(0);
   const [addingStates, setAddingStates] = useState({});
 
@@ -42,6 +43,7 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
 
     setLoading(true);
     setError("");
+    setErrorSeverity("error");
 
     try {
       let results = [];
@@ -49,18 +51,22 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
       if (tabValue === 0) {
         // Spotify/Last.fm search
         const response = await searchAPI.tracks(searchQuery);
-        results = response.data.data.tracks || [];
+        // Combine results from all services
+        const apiResults = response.data.results || {};
+        const spotifyTracks = apiResults.spotify || [];
+        const lastfmTracks = apiResults.lastfm || [];
+        results = [...spotifyTracks, ...lastfmTracks];
       } else {
         // Genius lyrics search
         const response = await lyricsAPI.search(searchQuery);
         results =
-          response.data.data.hits?.map((hit) => ({
-            id: hit.result.id,
-            title: hit.result.title,
-            artist: hit.result.primary_artist.name,
-            album: hit.result.album?.name,
-            image: hit.result.song_art_image_thumbnail_url,
-            url: hit.result.url,
+          response.data.data.results?.map((hit) => ({
+            id: hit.id,
+            title: hit.title,
+            artist: hit.artist,
+            album: hit.album,
+            image: hit.thumbnail,
+            url: hit.url,
             source: "genius",
           })) || [];
       }
@@ -68,7 +74,12 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
       setSearchResults(results);
     } catch (err) {
       console.error("Search error:", err);
-      setError("Failed to search for tracks. Please try again.");
+      console.error("Error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      setError(`Failed to search for tracks: ${err.message || 'Please try again.'}`);
     } finally {
       setLoading(false);
     }
@@ -93,6 +104,33 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
       return;
     }
 
+    // Validate playlistId format (MongoDB ObjectId should be 24 hex characters)
+    if (!/^[0-9a-fA-F]{24}$/.test(playlistId)) {
+      setError("Invalid playlist ID format");
+      return;
+    }
+
+    // Check for duplicates in existing songs before making API request
+    const songTitle = song.title || song.name || "Unknown Title";
+    const songArtist = song.artist || (song.artists && song.artists[0]?.name) || "Unknown Artist";
+    
+    const isDuplicate = existingSongs.some(existingSong => {
+      const existingTitle = (existingSong?.title || "").toLowerCase().trim();
+      const existingArtist = (existingSong?.artist || "").toLowerCase().trim();
+      const searchTitle = songTitle.toLowerCase().trim();
+      const searchArtist = songArtist.toLowerCase().trim();
+      
+      return existingTitle === searchTitle && existingArtist === searchArtist;
+    });
+    
+    if (isDuplicate) {
+      setError(`"${songTitle}" by ${songArtist} is already in this playlist`);
+      setErrorSeverity("warning");
+      // Remove the song from results since it's already in the playlist
+      setSearchResults((prev) => prev.filter((s) => s.id !== song.id));
+      return;
+    }
+
     setAddingStates((prev) => ({ ...prev, [song.id]: true }));
 
     try {
@@ -104,9 +142,15 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
         album: song.album || song.album?.name || "",
         duration: song.duration_ms
           ? Math.floor(song.duration_ms / 1000)
-          : (song.duration || 180), // Default to 3 minutes if no duration
+          : Math.floor(song.duration || 180), // Ensure integer, default to 3 minutes if no duration
         spotifyId: song.id || "",
       };
+
+      // For Genius API results, ensure proper data handling
+      if (song.source === "genius") {
+        songData.spotifyId = ""; // Genius songs don't have Spotify IDs
+        songData.duration = 180; // Default duration for Genius songs
+      }
 
       // Validate required fields
       if (!songData.title || !songData.artist || !songData.duration) {
@@ -117,7 +161,31 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
         songData.duration = 180; // Default duration
       }
 
+      // Ensure duration is always an integer (required by backend validation)
+      songData.duration = Math.floor(songData.duration);
+
+      // Validate field lengths (backend has length limits)
+      if (songData.title.length > 200) {
+        songData.title = songData.title.substring(0, 200);
+      }
+      if (songData.artist.length > 200) {
+        songData.artist = songData.artist.substring(0, 200);
+      }
+      if (songData.album.length > 200) {
+        songData.album = songData.album.substring(0, 200);
+      }
+
       console.log("🎵 Adding song to playlist:", songData);
+      console.log("🔍 Song data validation:", {
+        titleLength: songData.title.length,
+        artistLength: songData.artist.length,
+        albumLength: songData.album.length,
+        duration: songData.duration,
+        durationType: typeof songData.duration,
+        playlistIdLength: songData.playlistId.length,
+        spotifyIdLength: songData.spotifyId.length,
+        songSource: song.source || "spotify/lastfm"
+      });
 
       const response = await songAPI.add(songData);
       console.log("✅ Song added successfully:", response.data);
@@ -130,16 +198,53 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
       // Remove the added song from results or show success
       setSearchResults((prev) => prev.filter((s) => s.id !== song.id));
       setError(""); // Clear any previous errors
+      setErrorSeverity("error"); // Reset severity
     } catch (err) {
       console.error("❌ Add song error:", err);
       console.error("Error response:", err.response?.data);
       
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error || 
-                          err.message || 
-                          "Unknown error occurred";
-                          
-      setError(`Failed to add "${song.title || song.name}": ${errorMessage}`);
+      // Detailed error extraction
+      let errorMessage = "Unknown error occurred";
+      let isWarning = false;
+      
+      if (err.response?.data?.errors) {
+        // Handle validation errors array
+        const validationErrors = err.response.data.errors;
+        console.error("Validation errors:", validationErrors);
+        
+        if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+          errorMessage = validationErrors.map(error => error.msg || error.message || error).join(", ");
+        }
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+        
+        // Check if this is a duplicate song warning rather than an error
+        if (errorMessage.toLowerCase().includes("already exists") || 
+            errorMessage.toLowerCase().includes("duplicate")) {
+          isWarning = true;
+        }
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+        
+        // Check if this is a duplicate song warning rather than an error
+        if (errorMessage.toLowerCase().includes("already exists") || 
+            errorMessage.toLowerCase().includes("duplicate")) {
+          isWarning = true;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      // For duplicate songs, show a friendlier message and remove from results
+      if (isWarning) {
+        setError(`"${song.title || song.name}" is already in this playlist`);
+        setErrorSeverity("warning");
+        // Still remove the song from results since it's already added
+        setSearchResults((prev) => prev.filter((s) => s.id !== song.id));
+      } else {
+        setError(`Failed to add "${song.title || song.name}": ${errorMessage}`);
+        setErrorSeverity("error");
+      }
     } finally {
       setAddingStates((prev) => ({ ...prev, [song.id]: false }));
     }
@@ -157,6 +262,7 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
     setSearchQuery("");
     setSearchResults([]);
     setError("");
+    setErrorSeverity("error");
     setTabValue(0);
     onClose();
   };
@@ -242,7 +348,10 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded }) {
         {/* Error Alert */}
         {error && (
           <Box sx={{ px: 3, pb: 2 }}>
-            <Alert severity="error" onClose={() => setError("")}>
+            <Alert severity={errorSeverity} onClose={() => {
+              setError("");
+              setErrorSeverity("error");
+            }}>
               {error}
             </Alert>
           </Box>

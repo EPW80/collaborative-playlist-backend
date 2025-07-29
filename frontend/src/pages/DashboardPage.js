@@ -178,6 +178,11 @@ function DashboardPage() {
         setPlaylists(response.data.data.playlists || []);
       } catch (error) {
         console.error("Error loading playlists:", error);
+        setSnackbar({
+          open: true,
+          message: "Failed to load playlists",
+          severity: "error",
+        });
       } finally {
         setLoading(false);
       }
@@ -667,7 +672,8 @@ function DashboardPage() {
                           color="text.secondary"
                           sx={{ fontWeight: 500 }}
                         >
-                          Chain Creator: {playlist.creator?.username}
+                          Chain Creator:{" "}
+                          {playlist.creator?.username || "Unknown"}
                         </Typography>
                       </CardContent>
                       <CardActions sx={{ p: 2, pt: 0 }}>

@@ -109,8 +109,31 @@ class RealtimeService {
   /**
    * Handle user joining a playlist
    */
-  async handleJoinPlaylist(socket, { playlistId, userId }) {
+  async handleJoinPlaylist(socket, data) {
     try {
+      // Handle both old format (string) and new format (object)
+      let playlistId, userId;
+      
+      if (typeof data === 'string') {
+        // Old format: just playlistId string
+        playlistId = data;
+        userId = socket.userId; // Get from socket if available
+      } else {
+        // New format: object with playlistId and userId
+        playlistId = data.playlistId;
+        userId = data.userId || socket.userId;
+      }
+
+      if (!userId) {
+        socket.emit("join-playlist-error", { message: "User not authenticated" });
+        return;
+      }
+
+      if (!playlistId) {
+        socket.emit("join-playlist-error", { message: "Playlist ID required" });
+        return;
+      }
+
       // Validate playlist access
       const hasAccess = await this.validatePlaylistAccess(userId, playlistId);
       if (!hasAccess) {
@@ -170,8 +193,26 @@ class RealtimeService {
   /**
    * Handle user leaving a playlist
    */
-  async handleLeavePlaylist(socket, { playlistId, userId }) {
+  async handleLeavePlaylist(socket, data) {
     try {
+      // Handle both old format (string) and new format (object)
+      let playlistId, userId;
+      
+      if (typeof data === 'string') {
+        // Old format: just playlistId string
+        playlistId = data;
+        userId = socket.userId; // Get from socket if available
+      } else {
+        // New format: object with playlistId and userId
+        playlistId = data.playlistId;
+        userId = data.userId || socket.userId;
+      }
+
+      if (!userId || !playlistId) {
+        console.error("Missing userId or playlistId for leave playlist");
+        return;
+      }
+
       socket.leave(`playlist-${playlistId}`);
 
       // Remove from connected users
@@ -193,6 +234,8 @@ class RealtimeService {
         userId,
         timestamp: new Date(),
       });
+
+      console.log(`User ${userId} left playlist ${playlistId}`);
 
       // Update cache
       if (this.playlistSessions.has(playlistId)) {

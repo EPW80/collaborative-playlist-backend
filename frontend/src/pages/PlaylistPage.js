@@ -18,11 +18,22 @@ import {
   Card,
   CardContent,
   Switch,
+  Avatar,
+  LinearProgress,
   Fade,
   Grow,
   Slide,
-  Avatar,
-  LinearProgress,
+  Menu,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControlLabel,
+  Checkbox,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -40,9 +51,14 @@ import {
   Speed,
   Add as AddIcon,
   MusicNote,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
-import { playlistAPI } from "../services/api";
+import { playlistAPI, songAPI } from "../services/api";
 import socketService from "../services/websocket";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import MusicSearch from "../components/MusicSearch";
@@ -295,12 +311,42 @@ function PlaylistPage() {
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [musicSearchOpen, setMusicSearchOpen] = useState(false);
+  
+  // CRUD operation states
+  const [editPlaylistOpen, setEditPlaylistOpen] = useState(false);
+  const [deletePlaylistOpen, setDeletePlaylistOpen] = useState(false);
+  const [editingPlaylist, setEditingPlaylist] = useState({});
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [songMenuAnchor, setSongMenuAnchor] = useState(null);
+  const [selectedSong, setSelectedSong] = useState(null);
 
   const handleSongAdded = (newSong) => {
-    setPlaylist((prev) => ({
-      ...prev,
-      songs: [...(prev.songs || []), newSong],
-    }));
+    setPlaylist((prev) => {
+      if (!prev) {
+        // If playlist is not loaded yet, just return the current state
+        console.warn("Playlist not loaded yet, cannot add song");
+        return prev;
+      }
+      
+      // Check if song already exists in the playlist to prevent duplicates
+      const songExists = prev.songs.some(existingSong => {
+        const existingId = existingSong._id || existingSong.id;
+        const newId = newSong._id || newSong.id;
+        return existingId === newId || 
+          (existingSong.title === newSong.title && existingSong.artist === newSong.artist);
+      });
+      
+      if (songExists) {
+        console.warn("Song already exists in playlist, skipping duplicate addition");
+        return prev;
+      }
+      
+      return {
+        ...prev,
+        songs: [...(prev.songs || []), newSong],
+      };
+    });
   };
 
   const handleOpenMusicSearch = () => {
@@ -311,6 +357,73 @@ function PlaylistPage() {
     setMusicSearchOpen(false);
   };
 
+  // CRUD Handler Functions
+  const showSnackbar = (message, severity = "success") => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleEditPlaylist = () => {
+    setEditingPlaylist({
+      name: playlist.name,
+      description: playlist.description,
+      isPublic: playlist.isPublic,
+    });
+    setEditPlaylistOpen(true);
+    setMenuAnchor(null);
+  };
+
+  const handleUpdatePlaylist = async () => {
+    try {
+      const response = await playlistAPI.update(id, editingPlaylist);
+      setPlaylist(response.data.data.playlist);
+      setEditPlaylistOpen(false);
+      showSnackbar("Playlist updated successfully!");
+    } catch (error) {
+      console.error("Error updating playlist:", error);
+      showSnackbar("Failed to update playlist", "error");
+    }
+  };
+
+  const handleDeletePlaylist = async () => {
+    try {
+      await playlistAPI.delete(id);
+      setDeletePlaylistOpen(false);
+      showSnackbar("Playlist deleted successfully!");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Error deleting playlist:", error);
+      showSnackbar("Failed to delete playlist", "error");
+    }
+  };
+
+  const handleDeleteSong = async (songId) => {
+    try {
+      // Check if we have a valid song ID
+      if (!songId) {
+        console.error("No valid song ID provided for deletion");
+        console.log("Selected song:", selectedSong);
+        showSnackbar("Failed to remove song: Invalid song ID", "error");
+        return;
+      }
+
+      console.log("Attempting to delete song with ID:", songId);
+      await songAPI.remove(songId, id);
+      setPlaylist((prev) => ({
+        ...prev,
+        songs: prev.songs.filter((song) => {
+          const currentSongId = song._id || song.id;
+          return currentSongId !== songId;
+        }),
+      }));
+      setSongMenuAnchor(null);
+      setSelectedSong(null);
+      showSnackbar("Song removed from playlist!");
+    } catch (error) {
+      console.error("Error removing song:", error);
+      showSnackbar("Failed to remove song", "error");
+    }
+  };
+
   const theme = createBlockchainTheme(darkMode);
 
   useEffect(() => {
@@ -318,6 +431,24 @@ function PlaylistPage() {
       try {
         const response = await playlistAPI.getById(id);
         const playlistData = response.data.data.playlist;
+        
+        // Ensure songs is always an array
+        if (!playlistData.songs) {
+          playlistData.songs = [];
+        }
+        
+        // Remove any potential duplicates from the initial data
+        const uniqueSongs = playlistData.songs.filter((song, index, self) => 
+          index === self.findIndex(s => {
+            const sId = s._id || s.id;
+            const songId = song._id || song.id;
+            return sId === songId || 
+              (s.title === song.title && s.artist === song.artist);
+          })
+        );
+        
+        playlistData.songs = uniqueSongs;
+        
         setPlaylist(playlistData);
         setUserPermissions(playlistData.userAccess);
 
@@ -330,21 +461,45 @@ function PlaylistPage() {
 
         // Set up real-time listeners with animations
         socketService.onPlaylistUpdate((updatedPlaylist) => {
+          // Ensure songs is always an array
+          if (!updatedPlaylist.songs) {
+            updatedPlaylist.songs = [];
+          }
           setPlaylist(updatedPlaylist);
         });
 
         socketService.onSongAdded((data) => {
-          setPlaylist((prev) => ({
-            ...prev,
-            songs: [...prev.songs, data.song],
-          }));
+          setPlaylist((prev) => {
+            if (!prev) return prev;
+            
+            // Check if song already exists to prevent duplicates from WebSocket events
+            const songExists = prev.songs.some(existingSong => {
+              const existingId = existingSong._id || existingSong.id;
+              const newId = data.song._id || data.song.id;
+              return existingId === newId || 
+                (existingSong.title === data.song.title && existingSong.artist === data.song.artist);
+            });
+            
+            if (songExists) {
+              console.warn("Song already exists in playlist, skipping WebSocket duplicate");
+              return prev;
+            }
+            
+            return {
+              ...prev,
+              songs: [...(prev.songs || []), data.song],
+            };
+          });
         });
 
         socketService.onCollaboratorAdded((data) => {
-          setPlaylist((prev) => ({
-            ...prev,
-            collaborators: [...prev.collaborators, data.collaborator],
-          }));
+          setPlaylist((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              collaborators: [...(prev.collaborators || []), data.collaborator],
+            };
+          });
         });
       } catch (error) {
         console.error("Error loading playlist:", error);
@@ -472,6 +627,17 @@ function PlaylistPage() {
               sx={{ mr: 2 }}
             />
 
+            {/* Playlist Actions Menu */}
+            {(userPermissions?.permissions?.canEdit || userPermissions?.role === "owner") && (
+              <IconButton
+                color="inherit"
+                onClick={(e) => setMenuAnchor(e.currentTarget)}
+                sx={{ mr: 1 }}
+              >
+                <MoreVertIcon />
+              </IconButton>
+            )}
+
             {/* Dark Mode Toggle */}
             <Box sx={{ display: "flex", alignItems: "center", mr: 2 }}>
               <Brightness7 sx={{ mr: 1 }} />
@@ -571,7 +737,7 @@ function PlaylistPage() {
                     )}
                   </Box>
 
-                  {playlist.songs?.length === 0 ? (
+                  {!playlist?.songs || playlist.songs.length === 0 ? (
                     <Box textAlign="center" py={4}>
                       <AccountTree
                         sx={{ fontSize: 64, color: "text.secondary", mb: 2 }}
@@ -592,8 +758,8 @@ function PlaylistPage() {
                     </Box>
                   ) : (
                     <List>
-                      {playlist.songs.map((song, index) => (
-                        <Fade in={true} timeout={300 + index * 100} key={index}>
+                      {playlist.songs?.map((song, index) => (
+                        <Fade in={true} timeout={300 + index * 100} key={song._id || song.id || `song-${index}`}>
                           <ListItem
                             divider
                             sx={{
@@ -626,16 +792,35 @@ function PlaylistPage() {
                               }
                               secondary={song.artist || "Unknown Artist"}
                             />
-                            <IconButton
-                              color="primary"
-                              onClick={() => handleSongPlay(song)}
-                              sx={{
-                                transition: "transform 0.2s ease-in-out",
-                                "&:hover": { transform: "scale(1.2)" },
-                              }}
-                            >
-                              <PlayArrow />
-                            </IconButton>
+                            <Box sx={{ display: "flex", alignItems: "center" }}>
+                              <IconButton
+                                color="primary"
+                                onClick={() => handleSongPlay(song)}
+                                sx={{
+                                  transition: "transform 0.2s ease-in-out",
+                                  "&:hover": { transform: "scale(1.2)" },
+                                }}
+                              >
+                                <PlayArrow />
+                              </IconButton>
+                              {userPermissions?.permissions?.canEdit && (
+                                <IconButton
+                                  color="error"
+                                  onClick={(e) => {
+                                    console.log("Setting selected song:", song);
+                                    console.log("Song ID:", song._id || song.id);
+                                    setSelectedSong(song);
+                                    setSongMenuAnchor(e.currentTarget);
+                                  }}
+                                  sx={{
+                                    transition: "transform 0.2s ease-in-out",
+                                    "&:hover": { transform: "scale(1.2)" },
+                                  }}
+                                >
+                                  <MoreVertIcon />
+                                </IconButton>
+                              )}
+                            </Box>
                           </ListItem>
                         </Fade>
                       ))}
@@ -775,7 +960,120 @@ function PlaylistPage() {
           onClose={handleCloseMusicSearch}
           playlistId={id}
           onSongAdded={handleSongAdded}
+          existingSongs={playlist?.songs || []}
         />
+
+        {/* Playlist Actions Menu */}
+        <Menu
+          anchorEl={menuAnchor}
+          open={Boolean(menuAnchor)}
+          onClose={() => setMenuAnchor(null)}
+        >
+          <MenuItem onClick={handleEditPlaylist}>
+            <EditIcon sx={{ mr: 1 }} />
+            Edit Playlist
+          </MenuItem>
+          {userPermissions?.role === "owner" && (
+            <MenuItem 
+              onClick={() => {
+                setDeletePlaylistOpen(true);
+                setMenuAnchor(null);
+              }}
+              sx={{ color: "error.main" }}
+            >
+              <DeleteIcon sx={{ mr: 1 }} />
+              Delete Playlist
+            </MenuItem>
+          )}
+        </Menu>
+
+        {/* Song Actions Menu */}
+        <Menu
+          anchorEl={songMenuAnchor}
+          open={Boolean(songMenuAnchor)}
+          onClose={() => setSongMenuAnchor(null)}
+        >
+          <MenuItem 
+            onClick={() => handleDeleteSong(selectedSong?._id || selectedSong?.id)}
+            sx={{ color: "error.main" }}
+          >
+            <DeleteIcon sx={{ mr: 1 }} />
+            Remove from Playlist
+          </MenuItem>
+        </Menu>
+
+        {/* Edit Playlist Dialog */}
+        <Dialog open={editPlaylistOpen} onClose={() => setEditPlaylistOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Edit Playlist</DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              label="Playlist Name"
+              value={editingPlaylist.name || ""}
+              onChange={(e) => setEditingPlaylist(prev => ({ ...prev, name: e.target.value }))}
+              margin="normal"
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              value={editingPlaylist.description || ""}
+              onChange={(e) => setEditingPlaylist(prev => ({ ...prev, description: e.target.value }))}
+              margin="normal"
+              multiline
+              rows={3}
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={editingPlaylist.isPublic || false}
+                  onChange={(e) => setEditingPlaylist(prev => ({ ...prev, isPublic: e.target.checked }))}
+                />
+              }
+              label="Make playlist public"
+              sx={{ mt: 2 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditPlaylistOpen(false)}>
+              <CancelIcon sx={{ mr: 1 }} />
+              Cancel
+            </Button>
+            <Button onClick={handleUpdatePlaylist} variant="contained">
+              <SaveIcon sx={{ mr: 1 }} />
+              Save Changes
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Delete Playlist Confirmation Dialog */}
+        <Dialog open={deletePlaylistOpen} onClose={() => setDeletePlaylistOpen(false)}>
+          <DialogTitle>Delete Playlist</DialogTitle>
+          <DialogContent>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              This action cannot be undone. All songs and collaborators will be removed.
+            </Alert>
+            <Typography>
+              Are you sure you want to delete "{playlist?.name}"?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeletePlaylistOpen(false)}>Cancel</Button>
+            <Button onClick={handleDeletePlaylist} variant="contained" color="error">
+              Delete Playlist
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Success/Error Snackbar */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        >
+          <Alert severity={snackbar.severity} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Box>
     </ThemeProvider>
   );
