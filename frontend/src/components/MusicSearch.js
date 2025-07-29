@@ -29,7 +29,13 @@ import {
 } from "@mui/icons-material";
 import { searchAPI, songAPI, lyricsAPI } from "../services/api";
 
-function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [] }) {
+function MusicSearch({
+  open,
+  onClose,
+  playlistId,
+  onSongAdded,
+  existingSongs = [],
+}) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -77,9 +83,11 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
       console.error("Error details:", {
         message: err.message,
         response: err.response?.data,
-        status: err.response?.status
+        status: err.response?.status,
       });
-      setError(`Failed to search for tracks: ${err.message || 'Please try again.'}`);
+      setError(
+        `Failed to search for tracks: ${err.message || "Please try again."}`
+      );
     } finally {
       setLoading(false);
     }
@@ -98,6 +106,11 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
     return () => clearTimeout(timeoutId);
   }, [searchQuery, handleSearch]);
 
+  // Helper function to normalize song IDs for consistent state management
+  const getSongId = (song) => {
+    return song.id ? String(song.id) : `temp-${Date.now()}-${Math.random()}`;
+  };
+
   const handleAddSong = async (song) => {
     if (!playlistId) {
       setError("No playlist selected");
@@ -112,17 +125,20 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
 
     // Check for duplicates in existing songs before making API request
     const songTitle = song.title || song.name || "Unknown Title";
-    const songArtist = song.artist || (song.artists && song.artists[0]?.name) || "Unknown Artist";
-    
-    const isDuplicate = existingSongs.some(existingSong => {
+    const songArtist =
+      song.artist ||
+      (song.artists && song.artists[0]?.name) ||
+      "Unknown Artist";
+
+    const isDuplicate = existingSongs.some((existingSong) => {
       const existingTitle = (existingSong?.title || "").toLowerCase().trim();
       const existingArtist = (existingSong?.artist || "").toLowerCase().trim();
       const searchTitle = songTitle.toLowerCase().trim();
       const searchArtist = songArtist.toLowerCase().trim();
-      
+
       return existingTitle === searchTitle && existingArtist === searchArtist;
     });
-    
+
     if (isDuplicate) {
       setError(`"${songTitle}" by ${songArtist} is already in this playlist`);
       setErrorSeverity("warning");
@@ -131,19 +147,25 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
       return;
     }
 
-    setAddingStates((prev) => ({ ...prev, [song.id]: true }));
+    // Ensure song.id is properly handled for state management
+    const songId = getSongId(song);
+    setAddingStates((prev) => ({ ...prev, [songId]: true }));
 
     try {
       // Construct song data with proper validation
       const songData = {
         playlistId,
         title: song.title || song.name || "Unknown Title",
-        artist: song.artist || (song.artists && song.artists[0]?.name) || "Unknown Artist",
+        artist:
+          song.artist ||
+          (song.artists && song.artists[0]?.name) ||
+          "Unknown Artist",
         album: song.album || song.album?.name || "",
         duration: song.duration_ms
           ? Math.floor(song.duration_ms / 1000)
           : Math.floor(song.duration || 180), // Ensure integer, default to 3 minutes if no duration
-        ...(song.id && song.id.trim() !== "" && { spotifyId: song.id }),
+        ...(song.id &&
+          String(song.id).trim() !== "" && { spotifyId: String(song.id) }),
         // Include metadata with preview URL if available
         metadata: {
           previewUrl: song.preview_url || null,
@@ -162,7 +184,10 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
         songData.metadata = {
           previewUrl: null, // Genius doesn't provide preview URLs
           externalUrl: song.url || null,
-          imageUrl: song.header_image_thumbnail_url || song.song_art_image_thumbnail_url || null,
+          imageUrl:
+            song.header_image_thumbnail_url ||
+            song.song_art_image_thumbnail_url ||
+            null,
           popularity: 0,
           explicit: false,
         };
@@ -170,10 +195,12 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
 
       // Validate required fields
       if (!songData.title || !songData.artist || !songData.duration) {
-        throw new Error("Missing required song information (title, artist, or duration)");
+        throw new Error(
+          "Missing required song information (title, artist, or duration)"
+        );
       }
 
-      if (typeof songData.duration !== 'number' || songData.duration <= 0) {
+      if (typeof songData.duration !== "number" || songData.duration <= 0) {
         songData.duration = 180; // Default duration
       }
 
@@ -200,7 +227,7 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
         durationType: typeof songData.duration,
         playlistIdLength: songData.playlistId.length,
         spotifyIdLength: songData.spotifyId.length,
-        songSource: song.source || "spotify/lastfm"
+        songSource: song.source || "spotify/lastfm",
       });
 
       const response = await songAPI.add(songData);
@@ -218,46 +245,53 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
     } catch (err) {
       console.error("❌ Add song error:", err);
       console.error("Error response:", err.response?.data);
-      
+
       // Detailed error extraction
       let errorMessage = "Unknown error occurred";
       let isWarning = false;
-      
+
       if (err.response?.data?.errors) {
         // Handle validation errors array
         const validationErrors = err.response.data.errors;
         console.error("Validation errors:", validationErrors);
-        
+
         if (Array.isArray(validationErrors) && validationErrors.length > 0) {
-          errorMessage = validationErrors.map(error => error.msg || error.message || error).join(", ");
+          errorMessage = validationErrors
+            .map((error) => error.msg || error.message || error)
+            .join(", ");
         }
       } else if (err.response?.data?.message) {
         errorMessage = String(err.response.data.message);
-        
+
         // Check if this is a duplicate song warning rather than an error
-        if (errorMessage.toLowerCase().includes("already exists") || 
-            errorMessage.toLowerCase().includes("duplicate")) {
+        if (
+          errorMessage.toLowerCase().includes("already exists") ||
+          errorMessage.toLowerCase().includes("duplicate")
+        ) {
           isWarning = true;
         }
       } else if (err.response?.data?.error) {
         // Handle error object or string
-        if (typeof err.response.data.error === 'object') {
-          errorMessage = err.response.data.error.message || 
-                        err.response.data.error.msg || 
-                        JSON.stringify(err.response.data.error);
+        if (typeof err.response.data.error === "object") {
+          errorMessage =
+            err.response.data.error.message ||
+            err.response.data.error.msg ||
+            JSON.stringify(err.response.data.error);
         } else {
           errorMessage = String(err.response.data.error);
         }
-        
+
         // Check if this is a duplicate song warning rather than an error
-        if (errorMessage.toLowerCase().includes("already exists") || 
-            errorMessage.toLowerCase().includes("duplicate")) {
+        if (
+          errorMessage.toLowerCase().includes("already exists") ||
+          errorMessage.toLowerCase().includes("duplicate")
+        ) {
           isWarning = true;
         }
       } else if (err.message) {
         errorMessage = String(err.message);
       }
-      
+
       // For duplicate songs, show a friendlier message and remove from results
       if (isWarning) {
         setError(`"${song.title || song.name}" is already in this playlist`);
@@ -269,7 +303,9 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
         setErrorSeverity("error");
       }
     } finally {
-      setAddingStates((prev) => ({ ...prev, [song.id]: false }));
+      // Use the same songId logic for cleanup
+      const songId = getSongId(song);
+      setAddingStates((prev) => ({ ...prev, [songId]: false }));
     }
   };
 
@@ -371,10 +407,13 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
         {/* Error Alert */}
         {error && (
           <Box sx={{ px: 3, pb: 2 }}>
-            <Alert severity={errorSeverity} onClose={() => {
-              setError("");
-              setErrorSeverity("error");
-            }}>
+            <Alert
+              severity={errorSeverity}
+              onClose={() => {
+                setError("");
+                setErrorSeverity("error");
+              }}
+            >
               {error}
             </Alert>
           </Box>
@@ -392,7 +431,7 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
           {searchResults.length > 0 ? (
             <List>
               {searchResults.map((song, index) => (
-                <Card key={`${song.id}-${index}`} sx={{ mb: 2 }}>
+                <Card key={`${getSongId(song)}-${index}`} sx={{ mb: 2 }}>
                   <CardContent sx={{ p: 2 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <Avatar
@@ -453,14 +492,14 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
                       <Button
                         variant="contained"
                         startIcon={
-                          addingStates[song.id] ? (
+                          addingStates[getSongId(song)] ? (
                             <CircularProgress size={20} color="inherit" />
                           ) : (
                             <AddIcon />
                           )
                         }
                         onClick={() => handleAddSong(song)}
-                        disabled={addingStates[song.id]}
+                        disabled={addingStates[getSongId(song)]}
                         sx={{
                           background:
                             "linear-gradient(45deg, #00e676, #1976d2)",
@@ -470,7 +509,7 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
                           },
                         }}
                       >
-                        {addingStates[song.id] ? "Adding..." : "Add"}
+                        {addingStates[getSongId(song)] ? "Adding..." : "Add"}
                       </Button>
                     </Box>
                   </CardContent>

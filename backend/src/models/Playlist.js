@@ -157,6 +157,37 @@ const playlistSchema = new mongoose.Schema(
         default: Date.now,
       },
     },
+    // AI-powered features
+    aiGenerated: {
+      type: Boolean,
+      default: false,
+    },
+    aiSeedData: {
+      seeds: [mongoose.Schema.Types.Mixed], // Original seeds used for generation
+      preferences: mongoose.Schema.Types.Mixed, // User preferences
+      createdAt: Date,
+    },
+    aiAnalysis: {
+      overallMood: String,
+      dominantGenres: [String],
+      recommendedListeningContexts: [String],
+      musicalEra: String,
+      energyLevel: {
+        type: String,
+        enum: ["low", "medium", "high"],
+      },
+      coherenceScore: {
+        type: Number,
+        min: 0,
+        max: 100,
+      },
+      highlights: [String],
+      lastAnalyzed: Date,
+    },
+    aiDescriptionGenerated: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

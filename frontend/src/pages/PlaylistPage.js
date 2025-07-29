@@ -64,12 +64,16 @@ import {
   PersonAdd as PersonAddIcon,
   Email as EmailIcon,
   AccountCircle as AccountCircleIcon,
+  SmartToy as SmartToyIcon,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import { playlistAPI, songAPI, rbacAPI } from "../services/api";
 import socketService from "../services/websocket";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import MusicSearch from "../components/MusicSearch";
+import AIFeaturesPanel from "../components/AIFeaturesPanel";
+import AIPlaylistNameGenerator from "../components/AIPlaylistNameGenerator";
+import AISongRecommendations from "../components/AISongRecommendations";
 
 // Blockchain-inspired theme
 const createBlockchainTheme = (darkMode) => {
@@ -378,6 +382,11 @@ function PlaylistPage() {
   });
   const [collaboratorLoading, setCollaboratorLoading] = useState(false);
   const [collaboratorErrors, setCollaboratorErrors] = useState({});
+
+  // AI features states
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [showNameGenerator, setShowNameGenerator] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(false);
 
   // Audio playback states
   const audioRef = useRef(null);
@@ -759,6 +768,43 @@ function PlaylistPage() {
     }
   };
 
+  // AI Features Handlers
+  const handleOpenAIPanel = () => {
+    setShowAIPanel(true);
+  };
+
+  const handleCloseAIPanel = () => {
+    setShowAIPanel(false);
+  };
+
+  const handleOpenNameGenerator = () => {
+    setShowNameGenerator(true);
+  };
+
+  const handleCloseNameGenerator = () => {
+    setShowNameGenerator(false);
+  };
+
+  const handleOpenRecommendations = () => {
+    setShowRecommendations(true);
+  };
+
+  const handleCloseRecommendations = () => {
+    setShowRecommendations(false);
+  };
+
+  const handleNameGenerated = (newName) => {
+    // Update playlist name with generated name
+    setEditingPlaylist({ ...editingPlaylist, name: newName });
+    setShowNameGenerator(false);
+  };
+
+  const handleSongRecommended = (song) => {
+    // Add recommended song to playlist
+    addSongToPlaylist(song, "ai-recommendation");
+    setShowRecommendations(false);
+  };
+
   const theme = createBlockchainTheme(darkMode);
 
   useEffect(() => {
@@ -847,12 +893,17 @@ function PlaylistPage() {
   };
 
   const handleSongPlay = async (song) => {
-    if (!audioRef.current) return;
+    console.log("🎵 handleSongPlay called with song:", song);
+    if (!audioRef.current) {
+      console.error("❌ No audioRef.current available");
+      return;
+    }
 
     // If clicking the same song that's already playing, just toggle play/pause
     const currentSongId = currentSong?._id || currentSong?.id;
     const newSongId = song._id || song.id;
     if (currentSong && currentSongId === newSongId && isPlaying) {
+      console.log("🔄 Toggling play/pause for same song");
       handlePlayPause();
       return;
     }
@@ -894,6 +945,7 @@ function PlaylistPage() {
       // Check if song has metadata with preview URL
       if (song.metadata?.previewUrl) {
         audioUrl = song.metadata.previewUrl;
+        console.log("🎧 Using song preview URL:", audioUrl);
         showSnackbar(
           `Playing preview for "${song.title}" by ${song.artist}`,
           "info"
@@ -901,6 +953,7 @@ function PlaylistPage() {
       }
       // For Spotify songs without preview, use a demo audio
       else if (song.spotifyId) {
+        console.log("🎧 Using demo audio for Spotify song without preview");
         showSnackbar(
           `Preview not available for "${song.title}" - playing demo audio`,
           "warning"
@@ -910,6 +963,7 @@ function PlaylistPage() {
       }
       // For other sources, use demo audio
       else {
+        console.log("🎧 Using demo audio for non-Spotify song");
         showSnackbar(
           `Playing demo audio for "${song.title}" by ${song.artist}`,
           "warning"
@@ -919,9 +973,12 @@ function PlaylistPage() {
       }
 
       if (!audioUrl) {
+        console.error("❌ No audio URL available");
         showSnackbar("Audio preview not available for this song.", "warning");
         return;
       }
+
+      console.log("🔗 Final audio URL:", audioUrl);
 
       // Check if operation was cancelled before proceeding
       if (abortController.signal.aborted) return;
@@ -974,14 +1031,18 @@ function PlaylistPage() {
       // Final check before playing
       if (abortController.signal.aborted) return;
 
+      console.log("▶️ Attempting to play audio...");
       // Play the audio
       try {
         await audioRef.current.play();
+        console.log("✅ Audio play() successful");
         // Only update state if operation wasn't cancelled
         if (!abortController.signal.aborted) {
           setIsPlaying(true);
+          console.log("✅ Audio state updated to playing");
         }
       } catch (playError) {
+        console.error("❌ Audio play() failed:", playError);
         // If this specific operation was cancelled, don't show error
         if (abortController.signal.aborted) return;
         throw playError;
@@ -1014,7 +1075,11 @@ function PlaylistPage() {
   };
 
   const handlePlayPause = async () => {
-    if (!audioRef.current || !currentSong) return;
+    console.log("🎮 handlePlayPause called, isPlaying:", isPlaying, "currentSong:", currentSong);
+    if (!audioRef.current || !currentSong) {
+      console.error("❌ No audioRef or currentSong available");
+      return;
+    }
 
     // Cancel any ongoing audio loading operation
     if (currentAudioOperation.current) {
@@ -1030,18 +1095,22 @@ function PlaylistPage() {
 
     try {
       if (isPlaying) {
+        console.log("⏸️ Pausing audio");
         audioRef.current.pause();
         setIsPlaying(false);
       } else {
+        console.log("▶️ Playing audio, current src:", audioRef.current.src);
         // Simple play for existing loaded audio
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
           await playPromise;
+          console.log("✅ Play promise resolved");
         }
         setIsPlaying(true);
+        console.log("✅ Playing state updated");
       }
     } catch (error) {
-      console.error("Error toggling playback:", error);
+      console.error("❌ Error toggling playback:", error);
       // Only show user-facing errors for non-abort errors
       if (error.name !== "AbortError" && error.name !== "NotAllowedError") {
         showSnackbar("Error controlling playback", "error");
@@ -1175,6 +1244,16 @@ function PlaylistPage() {
                 <MoreVertIcon />
               </IconButton>
             )}
+
+            {/* AI Features Button */}
+            <IconButton
+              color="inherit"
+              onClick={handleOpenAIPanel}
+              sx={{ mr: 1 }}
+              title="AI Features"
+            >
+              <SmartToyIcon />
+            </IconButton>
 
             {/* Dark Mode Toggle */}
             <Box sx={{ display: "flex", alignItems: "center", mr: 2 }}>
@@ -1959,6 +2038,49 @@ function PlaylistPage() {
             {snackbar.message}
           </Alert>
         </Snackbar>
+
+        {/* AI Features Panel */}
+        <Dialog
+          open={showAIPanel}
+          onClose={handleCloseAIPanel}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <SmartToyIcon color="primary" />
+              AI Features
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <AIFeaturesPanel
+              playlist={playlist}
+              onShowNameGenerator={handleOpenNameGenerator}
+              onShowRecommendations={handleOpenRecommendations}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseAIPanel}>Close</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* AI Playlist Name Generator */}
+        <AIPlaylistNameGenerator
+          open={showNameGenerator}
+          onClose={handleCloseNameGenerator}
+          onNameSelected={handleNameGenerated}
+          currentName={playlist?.name}
+          songs={playlist?.songs || []}
+        />
+
+        {/* AI Song Recommendations */}
+        <AISongRecommendations
+          open={showRecommendations}
+          onClose={handleCloseRecommendations}
+          onSongSelect={handleSongRecommended}
+          playlistId={playlist?._id}
+          playlistName={playlist?.name}
+        />
       </Box>
     </ThemeProvider>
   );

@@ -12,6 +12,7 @@ const lyricsRoutes = require("./lyrics");
 const realtimeRoutes = require("./realtime");
 const rbacRoutes = require("./rbac");
 const suggestionsRoutes = require("./suggestions");
+const aiRoutes = require("./ai");
 
 module.exports = (app) => {
   // API routes
@@ -24,6 +25,7 @@ module.exports = (app) => {
   app.use("/api/realtime", realtimeRoutes);
   app.use("/api/rbac", rbacRoutes);
   app.use("/api/suggestions", suggestionsRoutes);
+  app.use("/api/ai", aiRoutes);
 
   // Root endpoint for health checks and deployment services
   app.get("/", (req, res) => {

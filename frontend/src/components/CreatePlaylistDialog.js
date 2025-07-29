@@ -10,10 +10,7 @@ import {
   Button,
   Alert,
 } from "@mui/material";
-import {
-  Save as SaveIcon,
-  Cancel as CancelIcon,
-} from "@mui/icons-material";
+import { Save as SaveIcon, Cancel as CancelIcon } from "@mui/icons-material";
 import { playlistAPI } from "../services/api";
 
 function CreatePlaylistDialog({ open, onClose, onPlaylistCreated }) {
@@ -66,7 +63,9 @@ function CreatePlaylistDialog({ open, onClose, onPlaylistCreated }) {
           fullWidth
           label="Playlist Name"
           value={playlistData.name}
-          onChange={(e) => setPlaylistData(prev => ({ ...prev, name: e.target.value }))}
+          onChange={(e) =>
+            setPlaylistData((prev) => ({ ...prev, name: e.target.value }))
+          }
           margin="normal"
           required
           error={!!error && !playlistData.name.trim()}
@@ -75,7 +74,12 @@ function CreatePlaylistDialog({ open, onClose, onPlaylistCreated }) {
           fullWidth
           label="Description (optional)"
           value={playlistData.description}
-          onChange={(e) => setPlaylistData(prev => ({ ...prev, description: e.target.value }))}
+          onChange={(e) =>
+            setPlaylistData((prev) => ({
+              ...prev,
+              description: e.target.value,
+            }))
+          }
           margin="normal"
           multiline
           rows={3}
@@ -84,7 +88,12 @@ function CreatePlaylistDialog({ open, onClose, onPlaylistCreated }) {
           control={
             <Checkbox
               checked={playlistData.isPublic}
-              onChange={(e) => setPlaylistData(prev => ({ ...prev, isPublic: e.target.checked }))}
+              onChange={(e) =>
+                setPlaylistData((prev) => ({
+                  ...prev,
+                  isPublic: e.target.checked,
+                }))
+              }
             />
           }
           label="Make playlist public"

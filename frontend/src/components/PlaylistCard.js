@@ -34,14 +34,22 @@ import {
 } from "@mui/icons-material";
 import { playlistAPI } from "../services/api";
 
-function PlaylistCard({ playlist, onUpdate, onDelete, userPermissions, onNavigate }) {
+function PlaylistCard({
+  playlist,
+  onUpdate,
+  onDelete,
+  userPermissions,
+  onNavigate,
+}) {
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingPlaylist, setEditingPlaylist] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const canEdit = userPermissions?.permissions?.canEdit || playlist.creator._id === userPermissions?.userId;
+  const canEdit =
+    userPermissions?.permissions?.canEdit ||
+    playlist.creator._id === userPermissions?.userId;
   const isOwner = playlist.creator._id === userPermissions?.userId;
 
   const handleEditClick = () => {
@@ -82,10 +90,10 @@ function PlaylistCard({ playlist, onUpdate, onDelete, userPermissions, onNavigat
 
   return (
     <>
-      <Card 
-        sx={{ 
-          height: "100%", 
-          display: "flex", 
+      <Card
+        sx={{
+          height: "100%",
+          display: "flex",
           flexDirection: "column",
           transition: "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
           "&:hover": {
@@ -95,8 +103,20 @@ function PlaylistCard({ playlist, onUpdate, onDelete, userPermissions, onNavigat
         }}
       >
         <CardContent sx={{ flexGrow: 1 }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-            <Typography variant="h6" component="h2" noWrap sx={{ flexGrow: 1, mr: 1 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              mb: 2,
+            }}
+          >
+            <Typography
+              variant="h6"
+              component="h2"
+              noWrap
+              sx={{ flexGrow: 1, mr: 1 }}
+            >
               {playlist.name}
             </Typography>
             {canEdit && (
@@ -109,7 +129,11 @@ function PlaylistCard({ playlist, onUpdate, onDelete, userPermissions, onNavigat
             )}
           </Box>
 
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ mb: 2, minHeight: 40 }}
+          >
             {playlist.description || "No description"}
           </Typography>
 
@@ -166,7 +190,7 @@ function PlaylistCard({ playlist, onUpdate, onDelete, userPermissions, onNavigat
           Edit Playlist
         </MenuItem>
         {isOwner && (
-          <MenuItem 
+          <MenuItem
             onClick={() => {
               setDeleteDialogOpen(true);
               setMenuAnchor(null);
@@ -180,21 +204,33 @@ function PlaylistCard({ playlist, onUpdate, onDelete, userPermissions, onNavigat
       </Menu>
 
       {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Edit Playlist</DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
             label="Playlist Name"
             value={editingPlaylist.name || ""}
-            onChange={(e) => setEditingPlaylist(prev => ({ ...prev, name: e.target.value }))}
+            onChange={(e) =>
+              setEditingPlaylist((prev) => ({ ...prev, name: e.target.value }))
+            }
             margin="normal"
           />
           <TextField
             fullWidth
             label="Description"
             value={editingPlaylist.description || ""}
-            onChange={(e) => setEditingPlaylist(prev => ({ ...prev, description: e.target.value }))}
+            onChange={(e) =>
+              setEditingPlaylist((prev) => ({
+                ...prev,
+                description: e.target.value,
+              }))
+            }
             margin="normal"
             multiline
             rows={3}
@@ -203,7 +239,12 @@ function PlaylistCard({ playlist, onUpdate, onDelete, userPermissions, onNavigat
             control={
               <Checkbox
                 checked={editingPlaylist.isPublic || false}
-                onChange={(e) => setEditingPlaylist(prev => ({ ...prev, isPublic: e.target.checked }))}
+                onChange={(e) =>
+                  setEditingPlaylist((prev) => ({
+                    ...prev,
+                    isPublic: e.target.checked,
+                  }))
+                }
               />
             }
             label="Make playlist public"
@@ -215,7 +256,11 @@ function PlaylistCard({ playlist, onUpdate, onDelete, userPermissions, onNavigat
             <CancelIcon sx={{ mr: 1 }} />
             Cancel
           </Button>
-          <Button onClick={handleUpdatePlaylist} variant="contained" disabled={loading}>
+          <Button
+            onClick={handleUpdatePlaylist}
+            variant="contained"
+            disabled={loading}
+          >
             <SaveIcon sx={{ mr: 1 }} />
             Save Changes
           </Button>
@@ -223,11 +268,15 @@ function PlaylistCard({ playlist, onUpdate, onDelete, userPermissions, onNavigat
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
         <DialogTitle>Delete Playlist</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            This action cannot be undone. All songs and collaborators will be removed.
+            This action cannot be undone. All songs and collaborators will be
+            removed.
           </Alert>
           <Typography>
             Are you sure you want to delete "{playlist.name}"?
@@ -237,9 +286,9 @@ function PlaylistCard({ playlist, onUpdate, onDelete, userPermissions, onNavigat
           <Button onClick={() => setDeleteDialogOpen(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleDeletePlaylist} 
-            variant="contained" 
+          <Button
+            onClick={handleDeletePlaylist}
+            variant="contained"
             color="error"
             disabled={loading}
           >
