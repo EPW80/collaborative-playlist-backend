@@ -144,12 +144,28 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
           ? Math.floor(song.duration_ms / 1000)
           : Math.floor(song.duration || 180), // Ensure integer, default to 3 minutes if no duration
         ...(song.id && song.id.trim() !== "" && { spotifyId: song.id }),
+        // Include metadata with preview URL if available
+        metadata: {
+          previewUrl: song.preview_url || null,
+          externalUrl: song.external_urls?.spotify || null,
+          imageUrl: song.image || null,
+          popularity: song.popularity || 0,
+          explicit: song.explicit || false,
+        },
       };
 
       // For Genius API results, ensure proper data handling
       if (song.source === "genius") {
         // Don't include spotifyId for Genius songs - let it be undefined
         songData.duration = 180; // Default duration for Genius songs
+        // Override metadata for Genius songs
+        songData.metadata = {
+          previewUrl: null, // Genius doesn't provide preview URLs
+          externalUrl: song.url || null,
+          imageUrl: song.header_image_thumbnail_url || song.song_art_image_thumbnail_url || null,
+          popularity: 0,
+          explicit: false,
+        };
       }
 
       // Validate required fields

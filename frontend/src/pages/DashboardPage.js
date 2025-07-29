@@ -4,7 +4,6 @@ import {
   Typography,
   Box,
   Button,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -33,6 +32,7 @@ import {
   Snackbar,
   CircularProgress,
 } from "@mui/material";
+import Grid from "@mui/material/Grid"; // Use Grid with new responsive syntax
 import {
   Add as AddIcon,
   AccountCircle,
@@ -503,7 +503,7 @@ function DashboardPage() {
           {loading ? (
             <Grid container spacing={3}>
               {[1, 2, 3, 4, 5, 6].map((item) => (
-                <Grid item xs={12} sm={6} md={4} key={item}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item}>
                   <Card>
                     <CardContent>
                       <Skeleton variant="text" width="80%" height={32} />
@@ -576,7 +576,7 @@ function DashboardPage() {
           ) : (
             <Grid container spacing={3}>
               {playlists.map((playlist, index) => (
-                <Grid item xs={12} sm={6} md={4} key={playlist._id}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={playlist._id}>
                   <Grow in timeout={1000 + index * 200}>
                     <Card>
                       <CardContent>

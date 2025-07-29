@@ -57,8 +57,16 @@ exports.getSongs = asyncHandler(async (req, res, next) => {
 
 // Add a song to a playlist
 exports.addSong = asyncHandler(async (req, res, next) => {
-  const { playlistId, title, artist, album, duration, spotifyId, youtubeId } =
-    req.body;
+  const { 
+    playlistId, 
+    title, 
+    artist, 
+    album, 
+    duration, 
+    spotifyId, 
+    youtubeId,
+    metadata 
+  } = req.body;
 
   if (!playlistId || !title || !artist || !duration) {
     return next(
@@ -151,6 +159,7 @@ exports.addSong = asyncHandler(async (req, res, next) => {
     addedBy: req.userId,
     playlist: playlistId,
     order: nextOrder,
+    metadata: metadata || {}, // Include metadata if provided
   });
 
   const savedSong = await newSong.save();

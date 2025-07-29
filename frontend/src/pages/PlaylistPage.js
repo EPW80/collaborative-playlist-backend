@@ -12,7 +12,6 @@ import {
   AppBar,
   Toolbar,
   IconButton,
-  Grid,
   Skeleton,
   Slider,
   Card,
@@ -40,6 +39,7 @@ import {
   ListItemIcon,
   CircularProgress,
 } from "@mui/material";
+import Grid from "@mui/material/Grid"; // Use Grid with new responsive syntax
 import {
   ArrowBack,
   People,
@@ -145,7 +145,7 @@ const createBlockchainTheme = (darkMode) => {
 const PlaylistSkeleton = () => (
   <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
     <Grid container spacing={3}>
-      <Grid item xs={12} md={8}>
+      <Grid size={{ xs: 12, md: 8 }}>
         <Paper sx={{ p: 3, mb: 3 }}>
           <Skeleton variant="text" width="60%" height={48} />
           <Skeleton variant="text" width="80%" height={24} />
@@ -173,7 +173,7 @@ const PlaylistSkeleton = () => (
           ))}
         </Paper>
       </Grid>
-      <Grid item xs={12} md={4}>
+      <Grid size={{ xs: 12, md: 4 }}>
         <Paper sx={{ p: 3, mb: 3 }}>
           <Skeleton variant="text" width="50%" height={32} />
           {[...Array(2)].map((_, i) => (
@@ -477,6 +477,28 @@ function PlaylistPage() {
       audioRef.current.volume = volume / 100;
     }
   }, [volume]);
+
+  // Close menus when user permissions change to prevent anchor element issues
+  useEffect(() => {
+    // Close menus when permissions might cause anchor elements to be removed
+    setMenuAnchor(null);
+    setSongMenuAnchor(null);
+  }, [userPermissions?.permissions, userPermissions?.role]);
+
+  // Safety cleanup for invalid anchor elements
+  useEffect(() => {
+    const checkAnchors = () => {
+      if (menuAnchor && !menuAnchor.isConnected) {
+        setMenuAnchor(null);
+      }
+      if (songMenuAnchor && !songMenuAnchor.isConnected) {
+        setSongMenuAnchor(null);
+      }
+    };
+
+    const interval = setInterval(checkAnchors, 100);
+    return () => clearInterval(interval);
+  }, [menuAnchor, songMenuAnchor]);
 
   // Helper function to add a song with proper duplicate checking
   const addSongToPlaylist = useCallback((newSong, source = "unknown") => {
@@ -872,24 +894,28 @@ function PlaylistPage() {
       // Check if song has metadata with preview URL
       if (song.metadata?.previewUrl) {
         audioUrl = song.metadata.previewUrl;
-      }
-      // For Spotify songs, we might have a preview URL
-      else if (song.spotifyId) {
         showSnackbar(
           `Playing preview for "${song.title}" by ${song.artist}`,
           "info"
         );
-        audioUrl =
-          "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3";
       }
-      // For other sources, try to use a demo audio
+      // For Spotify songs without preview, use a demo audio
+      else if (song.spotifyId) {
+        showSnackbar(
+          `Preview not available for "${song.title}" - playing demo audio`,
+          "warning"
+        );
+        // Use a reliable demo audio file
+        audioUrl = "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3";
+      }
+      // For other sources, use demo audio
       else {
         showSnackbar(
           `Playing demo audio for "${song.title}" by ${song.artist}`,
-          "info"
+          "warning"
         );
-        audioUrl =
-          "https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg";
+        // Use a different demo audio file for variety
+        audioUrl = "https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg";
       }
 
       if (!audioUrl) {
@@ -1134,7 +1160,16 @@ function PlaylistPage() {
               userPermissions?.role === "owner") && (
               <IconButton
                 color="inherit"
-                onClick={(e) => setMenuAnchor(e.currentTarget)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const target = e.currentTarget;
+                  
+                  // Ensure the element is still in the DOM before setting as anchor
+                  if (target && target.parentNode && target.isConnected) {
+                    setMenuAnchor(target);
+                  }
+                }}
                 sx={{ mr: 1 }}
               >
                 <MoreVertIcon />
@@ -1164,7 +1199,7 @@ function PlaylistPage() {
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
           <Grid container spacing={3}>
             {/* Playlist Info with Slide Animation */}
-            <Grid item xs={12} md={8}>
+            <Grid size={{ xs: 12, md: 8 }}>
               <Slide direction="up" in={true} timeout={500}>
                 <Paper sx={{ p: 3, mb: 3 }}>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
@@ -1316,13 +1351,20 @@ function PlaylistPage() {
                                 <IconButton
                                   color="error"
                                   onClick={(e) => {
-                                    console.log("Setting selected song:", song);
-                                    console.log(
-                                      "Song ID:",
-                                      song._id || song.id
-                                    );
-                                    setSelectedSong(song);
-                                    setSongMenuAnchor(e.currentTarget);
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const target = e.currentTarget;
+                                    
+                                    // Ensure the element is still in the DOM before setting as anchor
+                                    if (target && target.parentNode && target.isConnected) {
+                                      console.log("Setting selected song:", song);
+                                      console.log(
+                                        "Song ID:",
+                                        song._id || song.id
+                                      );
+                                      setSelectedSong(song);
+                                      setSongMenuAnchor(target);
+                                    }
                                   }}
                                   sx={{
                                     transition: "transform 0.2s ease-in-out",
@@ -1343,7 +1385,7 @@ function PlaylistPage() {
             </Grid>
 
             {/* Enhanced Sidebar */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               {/* Collaborators with Animation */}
               <Slide direction="left" in={true} timeout={600}>
                 <Paper sx={{ p: 3, mb: 3 }}>
@@ -1490,8 +1532,10 @@ function PlaylistPage() {
         {/* Playlist Actions Menu */}
         <Menu
           anchorEl={menuAnchor}
-          open={Boolean(menuAnchor)}
+          open={Boolean(menuAnchor) && menuAnchor?.isConnected}
           onClose={() => setMenuAnchor(null)}
+          disablePortal={false}
+          keepMounted={false}
         >
           <MenuItem onClick={handleEditPlaylist}>
             <EditIcon sx={{ mr: 1 }} />
@@ -1514,8 +1558,10 @@ function PlaylistPage() {
         {/* Song Actions Menu */}
         <Menu
           anchorEl={songMenuAnchor}
-          open={Boolean(songMenuAnchor)}
+          open={Boolean(songMenuAnchor) && songMenuAnchor?.isConnected}
           onClose={() => setSongMenuAnchor(null)}
+          disablePortal={false}
+          keepMounted={false}
         >
           {selectedSong &&
             (userPermissions?.permissions?.canRemoveSongs ||
