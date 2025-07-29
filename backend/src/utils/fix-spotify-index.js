@@ -31,7 +31,7 @@ async function fixSpotifyIndex() {
       // Try multiple possible index names
       const possibleIndexNames = ["spotifyId_1", "spotifyId"];
       let dropped = false;
-      
+
       for (const indexName of possibleIndexNames) {
         try {
           await collection.dropIndex(indexName);
@@ -43,11 +43,14 @@ async function fixSpotifyIndex() {
             // Index doesn't exist, continue trying other names
             continue;
           } else {
-            console.error(`❌ Error dropping index ${indexName}:`, error.message);
+            console.error(
+              `❌ Error dropping index ${indexName}:`,
+              error.message
+            );
           }
         }
       }
-      
+
       if (!dropped) {
         console.log("ℹ️  No global spotifyId index found to drop");
       }
@@ -58,20 +61,20 @@ async function fixSpotifyIndex() {
     // Create the new compound unique index (playlist + spotifyId)
     try {
       const indexName = "playlist_spotifyId_unique";
-      
+
       // Check if the index already exists
       const existingIndexes = await collection.indexes();
-      const indexExists = existingIndexes.some(idx => idx.name === indexName);
-      
+      const indexExists = existingIndexes.some((idx) => idx.name === indexName);
+
       if (indexExists) {
         console.log(`ℹ️  Compound index ${indexName} already exists`);
       } else {
         await collection.createIndex(
           { playlist: 1, spotifyId: 1 },
-          { 
-            unique: true, 
+          {
+            unique: true,
             sparse: true,
-            name: indexName
+            name: indexName,
           }
         );
         console.log(`✅ Created compound unique index: ${indexName}`);
@@ -84,13 +87,15 @@ async function fixSpotifyIndex() {
           await collection.dropIndex("playlist_spotifyId_unique");
           await collection.createIndex(
             { playlist: 1, spotifyId: 1 },
-            { 
-              unique: true, 
+            {
+              unique: true,
               sparse: true,
-              name: "playlist_spotifyId_unique"
+              name: "playlist_spotifyId_unique",
             }
           );
-          console.log("✅ Recreated compound unique index: playlist + spotifyId");
+          console.log(
+            "✅ Recreated compound unique index: playlist + spotifyId"
+          );
         } catch (recreateError) {
           console.error("❌ Error recreating index:", recreateError.message);
         }
@@ -101,40 +106,52 @@ async function fixSpotifyIndex() {
 
     // Check for potential duplicate issues before applying the new constraint
     console.log("🔍 Checking for duplicate spotifyId within playlists...");
-    const duplicates = await collection.aggregate([
-      {
-        $match: {
-          spotifyId: { $exists: true, $ne: null, $ne: "" }
-        }
-      },
-      {
-        $group: {
-          _id: { playlist: "$playlist", spotifyId: "$spotifyId" },
-          count: { $sum: 1 },
-          songs: { $push: { _id: "$_id", title: "$title", artist: "$artist" } }
-        }
-      },
-      {
-        $match: { count: { $gt: 1 } }
-      }
-    ]).toArray();
+    const duplicates = await collection
+      .aggregate([
+        {
+          $match: {
+            spotifyId: { $exists: true, $ne: null, $ne: "" },
+          },
+        },
+        {
+          $group: {
+            _id: { playlist: "$playlist", spotifyId: "$spotifyId" },
+            count: { $sum: 1 },
+            songs: {
+              $push: { _id: "$_id", title: "$title", artist: "$artist" },
+            },
+          },
+        },
+        {
+          $match: { count: { $gt: 1 } },
+        },
+      ])
+      .toArray();
 
     if (duplicates.length > 0) {
-      console.log(`⚠️  Found ${duplicates.length} duplicate spotifyId(s) within playlists:`);
+      console.log(
+        `⚠️  Found ${duplicates.length} duplicate spotifyId(s) within playlists:`
+      );
       duplicates.forEach((dup) => {
-        console.log(`  Playlist: ${dup._id.playlist}, SpotifyId: ${dup._id.spotifyId}, Count: ${dup.count}`);
+        console.log(
+          `  Playlist: ${dup._id.playlist}, SpotifyId: ${dup._id.spotifyId}, Count: ${dup.count}`
+        );
         dup.songs.forEach((song, index) => {
-          console.log(`    ${index + 1}. ${song.title} by ${song.artist} (${song._id})`);
+          console.log(
+            `    ${index + 1}. ${song.title} by ${song.artist} (${song._id})`
+          );
         });
       });
-      
+
       console.log("🛠️  Removing duplicate songs (keeping the first one)...");
       for (const dup of duplicates) {
         // Keep the first song, remove the rest
         const songsToRemove = dup.songs.slice(1);
         for (const song of songsToRemove) {
           await collection.deleteOne({ _id: song._id });
-          console.log(`   ✅ Removed duplicate: ${song.title} by ${song.artist}`);
+          console.log(
+            `   ✅ Removed duplicate: ${song.title} by ${song.artist}`
+          );
         }
       }
     } else {
@@ -149,7 +166,6 @@ async function fixSpotifyIndex() {
     });
 
     console.log("✅ Spotify ID index migration completed successfully!");
-
   } catch (error) {
     console.error("❌ Migration failed:", error);
     throw error;

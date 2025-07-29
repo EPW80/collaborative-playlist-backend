@@ -83,9 +83,10 @@ exports.submitSuggestion = asyncHandler(async (req, res) => {
     "username email"
   );
 
-  const addedSuggestion = updatedPlaylist.pendingSuggestions[
-    updatedPlaylist.pendingSuggestions.length - 1
-  ];
+  const addedSuggestion =
+    updatedPlaylist.pendingSuggestions[
+      updatedPlaylist.pendingSuggestions.length - 1
+    ];
 
   res.json({
     success: true,
@@ -166,8 +167,14 @@ exports.approveSuggestion = asyncHandler(async (req, res) => {
     duration: suggestion.song.duration,
     playlist: playlistId,
     addedBy: suggestion.suggestedBy,
-    spotifyId: suggestion.song.spotifyId && suggestion.song.spotifyId.trim() !== "" ? suggestion.song.spotifyId.trim() : undefined,
-    youtubeId: suggestion.song.youtubeId && suggestion.song.youtubeId.trim() !== "" ? suggestion.song.youtubeId.trim() : undefined,
+    spotifyId:
+      suggestion.song.spotifyId && suggestion.song.spotifyId.trim() !== ""
+        ? suggestion.song.spotifyId.trim()
+        : undefined,
+    youtubeId:
+      suggestion.song.youtubeId && suggestion.song.youtubeId.trim() !== ""
+        ? suggestion.song.youtubeId.trim()
+        : undefined,
     geniusId: suggestion.song.geniusId,
     previewUrl: suggestion.song.previewUrl,
     imageUrl: suggestion.song.imageUrl,

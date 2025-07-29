@@ -93,7 +93,7 @@ const getSongRecommendations = async (req, res) => {
 
     // Check if user has access to the playlist
     const userId = req.user.id;
-    const hasAccess = playlist.owner._id.toString() === userId || 
+    const hasAccess = playlist.creator._id.toString() === userId || 
                      playlist.collaborators.some(collab => 
                        collab.user.toString() === userId
                      );
@@ -155,7 +155,7 @@ const generatePlaylistDescription = async (req, res) => {
 
     // Check if user has edit access
     const userId = req.user.id;
-    const hasEditAccess = playlist.owner._id.toString() === userId || 
+    const hasEditAccess = playlist.creator._id.toString() === userId || 
                          playlist.collaborators.some(collab => 
                            collab.user.toString() === userId && 
                            ['editor', 'admin'].includes(collab.role)
@@ -218,7 +218,7 @@ const analyzePlaylist = async (req, res) => {
 
     // Check if user has access to the playlist
     const userId = req.user.id;
-    const hasAccess = playlist.owner._id.toString() === userId || 
+    const hasAccess = playlist.creator._id.toString() === userId || 
                      playlist.collaborators.some(collab => 
                        collab.user._id.toString() === userId
                      );
@@ -240,7 +240,7 @@ const analyzePlaylist = async (req, res) => {
           id: playlist._id,
           name: playlist.name,
           songCount: playlist.songs.length,
-          owner: playlist.owner.username,
+          owner: playlist.creator.username,
           created: playlist.createdAt
         },
         aiEnabled: aiService.isAIEnabled()

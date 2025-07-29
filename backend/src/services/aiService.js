@@ -1,4 +1,4 @@
-const OpenAI = require('openai');
+const OpenAI = require("openai");
 
 class AIService {
   constructor() {
@@ -19,9 +19,15 @@ class AIService {
     }
 
     try {
-      const songList = songs.slice(0, 10).map(song => 
-        `"${song.title}" by ${song.artist}${song.album ? ` (${song.album})` : ''}`
-      ).join('\n');
+      const songList = songs
+        .slice(0, 10)
+        .map(
+          (song) =>
+            `"${song.title}" by ${song.artist}${
+              song.album ? ` (${song.album})` : ""
+            }`
+        )
+        .join("\n");
 
       const prompt = `Based on the following songs, suggest 5 creative and catchy playlist names that capture the mood, genre, or theme of the music:
 
@@ -37,16 +43,17 @@ Consider:
 Return only the playlist names, one per line, without numbers or bullets.`;
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: "gpt-3.5-turbo",
         messages: [
           {
-            role: 'system',
-            content: 'You are a music curator expert at creating memorable and creative playlist names. Keep names under 50 characters and make them engaging.'
+            role: "system",
+            content:
+              "You are a music curator expert at creating memorable and creative playlist names. Keep names under 50 characters and make them engaging.",
           },
           {
-            role: 'user',
-            content: prompt
-          }
+            role: "user",
+            content: prompt,
+          },
         ],
         max_tokens: 200,
         temperature: 0.8,
@@ -54,14 +61,16 @@ Return only the playlist names, one per line, without numbers or bullets.`;
 
       const suggestions = response.choices[0].message.content
         .trim()
-        .split('\n')
-        .filter(name => name.trim())
-        .map(name => name.trim().replace(/^[-•*]\s*/, ''))
+        .split("\n")
+        .filter((name) => name.trim())
+        .map((name) => name.trim().replace(/^[-•*]\s*/, ""))
         .slice(0, 5);
 
-      return suggestions.length > 0 ? suggestions : this.getFallbackPlaylistNames(songs);
+      return suggestions.length > 0
+        ? suggestions
+        : this.getFallbackPlaylistNames(songs);
     } catch (error) {
-      console.error('AI playlist name generation failed:', error);
+      console.error("AI playlist name generation failed:", error);
       return this.getFallbackPlaylistNames(songs);
     }
   }
@@ -79,19 +88,21 @@ Return only the playlist names, one per line, without numbers or bullets.`;
 
     try {
       const recentSongs = playlist.songs.slice(-5);
-      const songAnalysis = recentSongs.map(song => ({
+      const songAnalysis = recentSongs.map((song) => ({
         title: song.title,
         artist: song.artist,
-        genre: song.metadata?.genre || 'Unknown',
-        energy: song.metadata?.energy || 'Medium',
-        mood: song.metadata?.mood || 'Neutral'
+        genre: song.metadata?.genre || "Unknown",
+        energy: song.metadata?.energy || "Medium",
+        mood: song.metadata?.mood || "Neutral",
       }));
 
       const prompt = `Analyze this playlist and suggest 3 songs that would fit well:
 
 Current playlist: "${playlist.name}"
 Recent songs:
-${songAnalysis.map(s => `- "${s.title}" by ${s.artist} (Genre: ${s.genre})`).join('\n')}
+${songAnalysis
+  .map((s) => `- "${s.title}" by ${s.artist} (Genre: ${s.genre})`)
+  .join("\n")}
 
 User preferences: ${JSON.stringify(userPreferences)}
 
@@ -103,33 +114,41 @@ Suggest 3 songs that would complement this playlist. For each suggestion, provid
 Format as JSON array with objects containing: title, artist, reason, genre`;
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: "gpt-3.5-turbo",
         messages: [
           {
-            role: 'system',
-            content: 'You are a music recommendation expert. Provide thoughtful song suggestions that consider musical flow, genre compatibility, and user preferences.'
+            role: "system",
+            content:
+              "You are a music recommendation expert. Provide thoughtful song suggestions that consider musical flow, genre compatibility, and user preferences.",
           },
           {
-            role: 'user',
-            content: prompt
-          }
+            role: "user",
+            content: prompt,
+          },
         ],
         max_tokens: 500,
         temperature: 0.7,
       });
 
       try {
-        const suggestions = JSON.parse(response.choices[0].message.content);
+        let content = response.choices[0].message.content;
+        
+        // Clean up markdown formatting if present
+        content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+        
+        const suggestions = JSON.parse(content);
         return {
-          suggestions: Array.isArray(suggestions) ? suggestions.slice(0, 3) : [],
-          reasoning: 'AI-powered recommendations based on playlist analysis'
+          suggestions: Array.isArray(suggestions)
+            ? suggestions.slice(0, 3)
+            : [],
+          reasoning: "AI-powered recommendations based on playlist analysis",
         };
       } catch (parseError) {
-        console.error('Failed to parse AI song suggestions:', parseError);
+        console.error("Failed to parse AI song suggestions:", parseError);
         return this.getFallbackSongSuggestions(playlist);
       }
     } catch (error) {
-      console.error('AI song suggestion failed:', error);
+      console.error("AI song suggestion failed:", error);
       return this.getFallbackSongSuggestions(playlist);
     }
   }
@@ -146,20 +165,22 @@ Format as JSON array with objects containing: title, artist, reason, genre`;
     }
 
     try {
-      const songSample = songs.slice(0, 8).map(song => 
-        `"${song.title}" by ${song.artist}`
-      ).join(', ');
+      const songSample = songs
+        .slice(0, 8)
+        .map((song) => `"${song.title}" by ${song.artist}`)
+        .join(", ");
 
-      const genres = [...new Set(songs
-        .map(s => s.metadata?.genre)
-        .filter(Boolean)
-      )].slice(0, 3);
+      const genres = [
+        ...new Set(songs.map((s) => s.metadata?.genre).filter(Boolean)),
+      ].slice(0, 3);
 
-      const prompt = `Create an engaging playlist description for "${playlistInfo.name || 'this playlist'}" containing ${songs.length} songs.
+      const prompt = `Create an engaging playlist description for "${
+        playlistInfo.name || "this playlist"
+      }" containing ${songs.length} songs.
 
 Featured songs include: ${songSample}
 
-Primary genres: ${genres.length > 0 ? genres.join(', ') : 'Mixed'}
+Primary genres: ${genres.length > 0 ? genres.join(", ") : "Mixed"}
 
 Write a 2-3 sentence description that:
 - Captures the mood and vibe
@@ -170,16 +191,17 @@ Write a 2-3 sentence description that:
 Keep it under 200 characters for social sharing.`;
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: "gpt-3.5-turbo",
         messages: [
           {
-            role: 'system',
-            content: 'You are a music journalist who writes compelling playlist descriptions. Make them vivid, concise, and appealing to music lovers.'
+            role: "system",
+            content:
+              "You are a music journalist who writes compelling playlist descriptions. Make them vivid, concise, and appealing to music lovers.",
           },
           {
-            role: 'user',
-            content: prompt
-          }
+            role: "user",
+            content: prompt,
+          },
         ],
         max_tokens: 150,
         temperature: 0.7,
@@ -188,7 +210,7 @@ Keep it under 200 characters for social sharing.`;
       const description = response.choices[0].message.content.trim();
       return description || this.getFallbackDescription(songs, playlistInfo);
     } catch (error) {
-      console.error('AI description generation failed:', error);
+      console.error("AI description generation failed:", error);
       return this.getFallbackDescription(songs, playlistInfo);
     }
   }
@@ -205,15 +227,17 @@ Keep it under 200 characters for social sharing.`;
 
     try {
       const songs = playlist.songs;
-      const artists = [...new Set(songs.map(s => s.artist))];
-      const genres = [...new Set(songs.map(s => s.metadata?.genre).filter(Boolean))];
-      
+      const artists = [...new Set(songs.map((s) => s.artist))];
+      const genres = [
+        ...new Set(songs.map((s) => s.metadata?.genre).filter(Boolean)),
+      ];
+
       const prompt = `Analyze this playlist and provide insights:
 
 Playlist: "${playlist.name}"
 Songs: ${songs.length}
-Artists: ${artists.slice(0, 10).join(', ')}
-Genres: ${genres.slice(0, 5).join(', ')}
+Artists: ${artists.slice(0, 10).join(", ")}
+Genres: ${genres.slice(0, 5).join(", ")}
 
 Provide a JSON response with:
 {
@@ -227,24 +251,30 @@ Provide a JSON response with:
 }`;
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: "gpt-3.5-turbo",
         messages: [
           {
-            role: 'system',
-            content: 'You are a music analyst providing objective insights about playlists. Return valid JSON only.'
+            role: "system",
+            content:
+              "You are a music analyst providing objective insights about playlists. Return valid JSON only.",
           },
           {
-            role: 'user',
-            content: prompt
-          }
+            role: "user",
+            content: prompt,
+          },
         ],
         max_tokens: 300,
         temperature: 0.5,
       });
 
-      return JSON.parse(response.choices[0].message.content);
+      let content = response.choices[0].message.content;
+      
+      // Clean up markdown formatting if present
+      content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+      
+      return JSON.parse(content);
     } catch (error) {
-      console.error('AI playlist analysis failed:', error);
+      console.error("AI playlist analysis failed:", error);
       return this.getFallbackAnalysis(playlist);
     }
   }
@@ -252,20 +282,20 @@ Provide a JSON response with:
   // Fallback methods for when AI is not available
   getFallbackPlaylistNames(songs) {
     const templates = [
-      'My Awesome Mix',
-      'Playlist ' + new Date().getFullYear(),
-      'Musical Journey',
-      'Sound Collection',
-      'Favorites Mix'
+      "My Awesome Mix",
+      "Playlist " + new Date().getFullYear(),
+      "Musical Journey",
+      "Sound Collection",
+      "Favorites Mix",
     ];
-    
+
     // Try to be smart about naming based on first few artists
     if (songs.length > 0) {
       const firstArtist = songs[0].artist;
       templates.unshift(`${firstArtist} & More`);
       templates.unshift(`Inspired by ${firstArtist}`);
     }
-    
+
     return templates.slice(0, 5);
   }
 
@@ -273,20 +303,20 @@ Provide a JSON response with:
     return {
       suggestions: [
         {
-          title: 'Explore similar artists',
-          artist: 'Various',
-          reason: 'Based on your current playlist style',
-          genre: 'Mixed'
-        }
+          title: "Explore similar artists",
+          artist: "Various",
+          reason: "Based on your current playlist style",
+          genre: "Mixed",
+        },
       ],
-      reasoning: 'Basic recommendations (AI features require OpenAI API key)'
+      reasoning: "Basic recommendations (AI features require OpenAI API key)",
     };
   }
 
   getFallbackDescription(songs, playlistInfo) {
     const songCount = songs.length;
-    const name = playlistInfo.name || 'this playlist';
-    
+    const name = playlistInfo.name || "this playlist";
+
     if (songCount === 0) {
       return `${name} is ready for your favorite tracks.`;
     } else if (songCount === 1) {
@@ -298,20 +328,20 @@ Provide a JSON response with:
 
   getFallbackAnalysis(playlist) {
     const songs = playlist.songs;
-    const artists = [...new Set(songs.map(s => s.artist))];
-    
+    const artists = [...new Set(songs.map((s) => s.artist))];
+
     return {
-      overallMood: 'Mixed vibes',
-      dominantGenres: ['Various'],
-      recommendedListeningContexts: ['Anytime listening'],
-      musicalEra: 'Contemporary',
-      energyLevel: 'medium',
+      overallMood: "Mixed vibes",
+      dominantGenres: ["Various"],
+      recommendedListeningContexts: ["Anytime listening"],
+      musicalEra: "Contemporary",
+      energyLevel: "medium",
       coherenceScore: 75,
       highlights: [
         `Features ${artists.length} different artists`,
         `${songs.length} total tracks`,
-        'Curated by music lovers'
-      ]
+        "Curated by music lovers",
+      ],
     };
   }
 
@@ -330,13 +360,13 @@ Provide a JSON response with:
   getStatus() {
     return {
       enabled: this.isEnabled,
-      model: 'gpt-3.5-turbo',
+      model: "gpt-3.5-turbo",
       features: [
-        'Playlist name generation',
-        'Song recommendations',
-        'Description generation',
-        'Playlist analysis'
-      ]
+        "Playlist name generation",
+        "Song recommendations",
+        "Description generation",
+        "Playlist analysis",
+      ],
     };
   }
 }

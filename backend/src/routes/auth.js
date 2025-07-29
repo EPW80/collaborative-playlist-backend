@@ -144,9 +144,7 @@ router.post(
     body("password")
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters"),
-    body("adminSecret")
-      .notEmpty()
-      .withMessage("Admin secret is required"),
+    body("adminSecret").notEmpty().withMessage("Admin secret is required"),
     body("role")
       .optional()
       .isIn(["admin", "superadmin"])
@@ -260,7 +258,10 @@ router.post("/logout", auth, async (req, res, next) => {
         realtimeService.connectedUsers.delete(userId);
       }
     } catch (realtimeError) {
-      console.warn("Real-time service error during logout:", realtimeError.message);
+      console.warn(
+        "Real-time service error during logout:",
+        realtimeError.message
+      );
       // Continue with logout even if real-time cleanup fails
     }
 

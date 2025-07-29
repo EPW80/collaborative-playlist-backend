@@ -81,8 +81,13 @@ class CacheService {
   async connect() {
     try {
       // Check if Redis is required but not configured
-      if (this.isRedisRequired && (!config.redis?.enabled || this.isRedisOptional)) {
-        throw new Error("Redis is required but not properly configured. Set REDIS_REQUIRED=true and ensure Redis is available.");
+      if (
+        this.isRedisRequired &&
+        (!config.redis?.enabled || this.isRedisOptional)
+      ) {
+        throw new Error(
+          "Redis is required but not properly configured. Set REDIS_REQUIRED=true and ensure Redis is available."
+        );
       }
 
       // Skip Redis connection if disabled and not required
@@ -98,9 +103,11 @@ class CacheService {
           reconnectStrategy: (retries) => {
             if (retries >= this.maxRetries) {
               const errorMsg = `❌ Redis max retries (${this.maxRetries}) reached.`;
-              
+
               if (this.isRedisRequired) {
-                console.error(errorMsg + " Application cannot continue without Redis.");
+                console.error(
+                  errorMsg + " Application cannot continue without Redis."
+                );
                 process.exit(1); // Exit if Redis is required
               } else {
                 console.log(errorMsg + " Disabling Redis.");
@@ -122,7 +129,7 @@ class CacheService {
         console.log("✅ Redis connected and ready");
         this.isConnected = true;
         this.retryAttempts = 0;
-        
+
         // Update cache hit rate periodically
         this.updateMetrics();
       });
@@ -135,7 +142,9 @@ class CacheService {
 
         // If Redis is required, fail fast
         if (this.isRedisRequired) {
-          console.error("🚨 Redis is required but connection failed. Application cannot continue.");
+          console.error(
+            "🚨 Redis is required but connection failed. Application cannot continue."
+          );
           process.exit(1);
         }
 
@@ -427,9 +436,10 @@ class CacheService {
   updateMetrics() {
     setInterval(() => {
       const totalRequests = this.metrics.hits + this.metrics.misses;
-      this.metrics.cacheHitRate = totalRequests > 0 
-        ? Math.round((this.metrics.hits / totalRequests) * 100) 
-        : 0;
+      this.metrics.cacheHitRate =
+        totalRequests > 0
+          ? Math.round((this.metrics.hits / totalRequests) * 100)
+          : 0;
     }, 60000); // Update every minute
   }
 

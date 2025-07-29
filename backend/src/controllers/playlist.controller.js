@@ -153,7 +153,11 @@ exports.getPlaylistById = asyncHandler(async (req, res, next) => {
   playlistData.userAccess = {
     role: userRole,
     permissions,
-    canManage: rbacService.hasPermission(userId, playlist, "canManageCollaborators"),
+    canManage: rbacService.hasPermission(
+      userId,
+      playlist,
+      "canManageCollaborators"
+    ),
   };
 
   // Cache the playlist data
@@ -200,7 +204,7 @@ exports.updatePlaylist = asyncHandler(async (req, res, next) => {
   // Invalidate relevant caches
   await cacheService.invalidate(cacheService.keys.playlist(playlistId));
   await cacheService.invalidate(cacheService.keys.userPlaylists(userId));
-  
+
   // If playlist was made public/private, invalidate public cache
   if (isPublic !== undefined) {
     await cacheService.invalidate("public:playlists:*");

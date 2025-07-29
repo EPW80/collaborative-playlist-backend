@@ -34,21 +34,23 @@ exports.register = asyncHandler(async (req, res, next) => {
 
   // Handle admin role assignment
   let userRole = "user"; // default role
-  
+
   if (role && role !== "user") {
     // If requesting admin privileges, validate admin secret
     const ADMIN_SECRET = process.env.ADMIN_REGISTRATION_SECRET;
-    
+
     if (!adminSecret || adminSecret !== ADMIN_SECRET) {
-      return next(new AppError("Invalid admin secret required for elevated roles", 403));
+      return next(
+        new AppError("Invalid admin secret required for elevated roles", 403)
+      );
     }
-    
+
     // Validate the requested role
     const allowedRoles = ["user", "moderator", "admin", "superadmin"];
     if (!allowedRoles.includes(role)) {
       return next(new AppError("Invalid role specified", 400));
     }
-    
+
     userRole = role;
   }
 
@@ -66,11 +68,11 @@ exports.register = asyncHandler(async (req, res, next) => {
   }
 
   // Create new user with role
-  const user = new User({ 
-    username, 
-    email, 
-    password, 
-    role: userRole 
+  const user = new User({
+    username,
+    email,
+    password,
+    role: userRole,
   });
   await user.save();
 
@@ -79,11 +81,15 @@ exports.register = asyncHandler(async (req, res, next) => {
 
   // Log registration event
   const roleLabel = userRole === "user" ? "user" : `${userRole} user`;
-  console.log(`✅ New ${roleLabel} registered: ${user.username} (${user.email})`);
+  console.log(
+    `✅ New ${roleLabel} registered: ${user.username} (${user.email})`
+  );
 
   res.status(201).json({
     success: true,
-    message: `${userRole === "user" ? "User" : `${userRole} user`} registered successfully`,
+    message: `${
+      userRole === "user" ? "User" : `${userRole} user`
+    } registered successfully`,
     data: {
       token,
       user: formatUserResponse(user),
@@ -126,11 +132,11 @@ exports.registerAdmin = asyncHandler(async (req, res, next) => {
   }
 
   // Create new admin user
-  const user = new User({ 
-    username, 
-    email, 
-    password, 
-    role 
+  const user = new User({
+    username,
+    email,
+    password,
+    role,
   });
   await user.save();
 

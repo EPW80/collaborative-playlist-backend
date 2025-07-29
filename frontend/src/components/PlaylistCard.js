@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -46,6 +46,18 @@ function PlaylistCard({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingPlaylist, setEditingPlaylist] = useState({});
   const [loading, setLoading] = useState(false);
+
+  // Safety cleanup for invalid anchor elements
+  useEffect(() => {
+    const checkAnchors = () => {
+      if (menuAnchor && !menuAnchor.isConnected) {
+        setMenuAnchor(null);
+      }
+    };
+
+    const interval = setInterval(checkAnchors, 100);
+    return () => clearInterval(interval);
+  }, [menuAnchor]);
 
   const canEdit =
     userPermissions?.permissions?.canEdit ||
@@ -182,7 +194,7 @@ function PlaylistCard({
       {/* Actions Menu */}
       <Menu
         anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
+        open={Boolean(menuAnchor) && menuAnchor?.isConnected !== false}
         onClose={() => setMenuAnchor(null)}
       >
         <MenuItem onClick={handleEditClick}>

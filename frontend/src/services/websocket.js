@@ -63,12 +63,12 @@ class SocketService {
       // Get user ID from localStorage or decode from token
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const userId = user.id || user._id;
-      
+
       if (!userId) {
         console.error("Cannot join playlist: User ID not found");
         return;
       }
-      
+
       this.socket.emit("join-playlist", { playlistId, userId });
     }
   }
@@ -78,12 +78,12 @@ class SocketService {
       // Get user ID from localStorage or decode from token
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const userId = user.id || user._id;
-      
+
       if (!userId) {
         console.error("Cannot leave playlist: User ID not found");
         return;
       }
-      
+
       this.socket.emit("leave-playlist", { playlistId, userId });
     }
   }

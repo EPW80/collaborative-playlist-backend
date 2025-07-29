@@ -204,6 +204,18 @@ function DashboardPage() {
     handleMenuClose();
   };
 
+  // Safety cleanup for invalid anchor elements
+  useEffect(() => {
+    const checkAnchors = () => {
+      if (anchorEl && !anchorEl.isConnected) {
+        setAnchorEl(null);
+      }
+    };
+
+    const interval = setInterval(checkAnchors, 100);
+    return () => clearInterval(interval);
+  }, [anchorEl]);
+
   const handleCreatePlaylist = () => {
     setCreateModalOpen(true);
   };
@@ -424,7 +436,7 @@ function DashboardPage() {
               <Menu
                 id="account-menu"
                 anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
+                open={Boolean(anchorEl) && anchorEl?.isConnected !== false}
                 onClose={handleMenuClose}
                 PaperProps={{
                   sx: {

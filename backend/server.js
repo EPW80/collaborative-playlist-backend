@@ -26,7 +26,7 @@ const io = socketIO(server, {
       "http://localhost:3000",
       "http://localhost:3001",
       "https://frontend-pwe6ouxg7-epws-projects.vercel.app",
-      "https://frontend-dr5de4z33-epws-projects.vercel.app"
+      "https://frontend-dr5de4z33-epws-projects.vercel.app",
     ],
     methods: ["GET", "POST"],
     credentials: true,

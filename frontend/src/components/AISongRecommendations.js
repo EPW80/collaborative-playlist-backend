@@ -234,6 +234,7 @@ const AISongRecommendations = ({
                       </Typography>
                     </Box>
                   }
+                  secondaryTypographyProps={{ component: "div" }}
                 />
               </ListItem>
             ))}

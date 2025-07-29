@@ -29,7 +29,11 @@ exports.getUserPermissions = asyncHandler(async (req, res) => {
       playlistId,
       userRole,
       permissions,
-      canManage: rbacService.hasPermission(userId, playlist, "canManageCollaborators"),
+      canManage: rbacService.hasPermission(
+        userId,
+        playlist,
+        "canManageCollaborators"
+      ),
     },
   });
 });
@@ -72,7 +76,12 @@ exports.addCollaborator = asyncHandler(async (req, res) => {
   }
 
   // Add collaborator
-  await rbacService.addCollaborator(playlist, userToInvite._id, role, inviterId);
+  await rbacService.addCollaborator(
+    playlist,
+    userToInvite._id,
+    role,
+    inviterId
+  );
 
   res.json({
     success: true,
@@ -222,8 +231,14 @@ exports.getCollaborators = asyncHandler(async (req, res) => {
 
   // Add current user's management capabilities
   const userRole = rbacService.getUserRole(userId, playlist);
-  const canManage = rbacService.hasPermission(userId, playlist, "canManageCollaborators");
-  const assignableRoles = canManage ? rbacService.getAssignableRoles(userRole) : [];
+  const canManage = rbacService.hasPermission(
+    userId,
+    playlist,
+    "canManageCollaborators"
+  );
+  const assignableRoles = canManage
+    ? rbacService.getAssignableRoles(userRole)
+    : [];
 
   res.json({
     success: true,
@@ -245,11 +260,13 @@ exports.getCollaborators = asyncHandler(async (req, res) => {
  * @access Private
  */
 exports.getRoles = asyncHandler(async (req, res) => {
-  const roles = Object.entries(rbacService.rolePermissions).map(([role, permissions]) => ({
-    role,
-    permissions,
-    hierarchy: rbacService.roleHierarchy[role],
-  }));
+  const roles = Object.entries(rbacService.rolePermissions).map(
+    ([role, permissions]) => ({
+      role,
+      permissions,
+      hierarchy: rbacService.roleHierarchy[role],
+    })
+  );
 
   res.json({
     success: true,
@@ -322,7 +339,7 @@ exports.transferOwnership = asyncHandler(async (req, res) => {
 
   // Transfer ownership
   playlist.creator = newOwnerId;
-  
+
   // Remove new owner from collaborators list
   playlist.collaborators = playlist.collaborators.filter(
     (collab) => collab.user.toString() !== newOwnerId

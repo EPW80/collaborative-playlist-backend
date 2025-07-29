@@ -57,15 +57,15 @@ exports.getSongs = asyncHandler(async (req, res, next) => {
 
 // Add a song to a playlist
 exports.addSong = asyncHandler(async (req, res, next) => {
-  const { 
-    playlistId, 
-    title, 
-    artist, 
-    album, 
-    duration, 
-    spotifyId, 
+  const {
+    playlistId,
+    title,
+    artist,
+    album,
+    duration,
+    spotifyId,
     youtubeId,
-    metadata 
+    metadata,
   } = req.body;
 
   if (!playlistId || !title || !artist || !duration) {
@@ -85,15 +85,21 @@ exports.addSong = asyncHandler(async (req, res, next) => {
 
   // Use RBAC service to check permissions
   const rbacService = require("../services/rbacService");
-  
+
   // Check if user has permission to add songs
-  const canAddSongs = rbacService.hasPermission(req.userId, playlist, "canAddSongs");
-  
+  const canAddSongs = rbacService.hasPermission(
+    req.userId,
+    playlist,
+    "canAddSongs"
+  );
+
   if (!canAddSongs) {
     const userRole = rbacService.getUserRole(req.userId, playlist);
     return next(
       new AppError(
-        `Access denied: ${userRole || 'No access'} role cannot add songs to this playlist. Required: contributor or higher.`,
+        `Access denied: ${
+          userRole || "No access"
+        } role cannot add songs to this playlist. Required: contributor or higher.`,
         403
       )
     );
@@ -108,24 +114,25 @@ exports.addSong = asyncHandler(async (req, res, next) => {
         {
           title: title,
           artist: artist,
-        }
-      ]
+        },
+      ],
     };
-    
+
     // If spotifyId is provided, also check for duplicate spotifyId
     if (spotifyId && spotifyId.trim() !== "") {
       duplicateQuery.$or.push({
-        spotifyId: spotifyId.trim()
+        spotifyId: spotifyId.trim(),
       });
     }
-    
+
     const existingSong = await Song.findOne(duplicateQuery);
 
     if (existingSong) {
-      const duplicateReason = existingSong.spotifyId === (spotifyId && spotifyId.trim()) ? 
-        "This song (same Spotify track)" : 
-        `"${title}" by ${artist}`;
-        
+      const duplicateReason =
+        existingSong.spotifyId === (spotifyId && spotifyId.trim())
+          ? "This song (same Spotify track)"
+          : `"${title}" by ${artist}`;
+
       return res.status(409).json({
         success: false,
         error: "Song already exists in playlist",
@@ -136,9 +143,9 @@ exports.addSong = asyncHandler(async (req, res, next) => {
             id: existingSong._id,
             title: existingSong.title,
             artist: existingSong.artist,
-            addedAt: existingSong.addedAt
-          }
-        }
+            addedAt: existingSong.addedAt,
+          },
+        },
       });
     }
   }
@@ -154,8 +161,10 @@ exports.addSong = asyncHandler(async (req, res, next) => {
     artist: artist.trim(),
     album: album?.trim() || "",
     duration,
-    spotifyId: spotifyId && spotifyId.trim() !== "" ? spotifyId.trim() : undefined,
-    youtubeId: youtubeId && youtubeId.trim() !== "" ? youtubeId.trim() : undefined,
+    spotifyId:
+      spotifyId && spotifyId.trim() !== "" ? spotifyId.trim() : undefined,
+    youtubeId:
+      youtubeId && youtubeId.trim() !== "" ? youtubeId.trim() : undefined,
     addedBy: req.userId,
     playlist: playlistId,
     order: nextOrder,
@@ -225,15 +234,21 @@ exports.removeSong = asyncHandler(async (req, res, next) => {
 
   // Use RBAC service to check permissions
   const rbacService = require("../services/rbacService");
-  
+
   // Check if user has permission to remove songs
-  const canRemoveSongs = rbacService.hasPermission(req.userId, playlist, "canRemoveSongs");
-  
+  const canRemoveSongs = rbacService.hasPermission(
+    req.userId,
+    playlist,
+    "canRemoveSongs"
+  );
+
   if (!canRemoveSongs) {
     const userRole = rbacService.getUserRole(req.userId, playlist);
     return next(
       new AppError(
-        `Access denied: ${userRole || 'No access'} role cannot remove songs from this playlist. Required: contributor or higher.`,
+        `Access denied: ${
+          userRole || "No access"
+        } role cannot remove songs from this playlist. Required: contributor or higher.`,
         403
       )
     );

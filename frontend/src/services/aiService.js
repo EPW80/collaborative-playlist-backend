@@ -1,19 +1,19 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 // Create axios instance with default config
 const aiAPI = axios.create({
   baseURL: `${API_URL}/ai`,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Add auth token to requests
 aiAPI.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,10 +28,10 @@ class AIService {
    */
   async getStatus() {
     try {
-      const response = await aiAPI.get('/status');
+      const response = await aiAPI.get("/status");
       return response.data;
     } catch (error) {
-      console.error('Error getting AI status:', error);
+      console.error("Error getting AI status:", error);
       throw this.handleError(error);
     }
   }
@@ -43,10 +43,10 @@ class AIService {
    */
   async generatePlaylistNames(songs) {
     try {
-      const response = await aiAPI.post('/generate-names', { songs });
+      const response = await aiAPI.post("/generate-names", { songs });
       return response.data;
     } catch (error) {
-      console.error('Error generating playlist names:', error);
+      console.error("Error generating playlist names:", error);
       throw this.handleError(error);
     }
   }
@@ -60,11 +60,11 @@ class AIService {
   async getSongRecommendations(playlistId, preferences = {}) {
     try {
       const response = await aiAPI.post(`/recommendations/${playlistId}`, {
-        preferences
+        preferences,
       });
       return response.data;
     } catch (error) {
-      console.error('Error getting song recommendations:', error);
+      console.error("Error getting song recommendations:", error);
       throw this.handleError(error);
     }
   }
@@ -78,11 +78,11 @@ class AIService {
   async generatePlaylistDescription(playlistId, updatePlaylist = false) {
     try {
       const response = await aiAPI.post(`/generate-description/${playlistId}`, {
-        updatePlaylist
+        updatePlaylist,
       });
       return response.data;
     } catch (error) {
-      console.error('Error generating playlist description:', error);
+      console.error("Error generating playlist description:", error);
       throw this.handleError(error);
     }
   }
@@ -97,7 +97,7 @@ class AIService {
       const response = await aiAPI.get(`/analyze/${playlistId}`);
       return response.data;
     } catch (error) {
-      console.error('Error analyzing playlist:', error);
+      console.error("Error analyzing playlist:", error);
       throw this.handleError(error);
     }
   }
@@ -109,10 +109,10 @@ class AIService {
    */
   async createSmartPlaylist(config) {
     try {
-      const response = await aiAPI.post('/smart-playlist', config);
+      const response = await aiAPI.post("/smart-playlist", config);
       return response.data;
     } catch (error) {
-      console.error('Error creating smart playlist:', error);
+      console.error("Error creating smart playlist:", error);
       throw this.handleError(error);
     }
   }
@@ -126,7 +126,7 @@ class AIService {
       const status = await this.getStatus();
       return status.data?.enabled || false;
     } catch (error) {
-      console.warn('Could not check AI availability:', error);
+      console.warn("Could not check AI availability:", error);
       return false;
     }
   }
@@ -139,35 +139,35 @@ class AIService {
   handleError(error) {
     if (error.response) {
       // Server responded with error status
-      const message = error.response.data?.message || 'AI service error';
+      const message = error.response.data?.message || "AI service error";
       const status = error.response.status;
-      
+
       if (status === 401) {
         // Handle authentication errors
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-        return new Error('Authentication required');
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+        return new Error("Authentication required");
       }
-      
+
       if (status === 403) {
-        return new Error('Access denied to AI features');
+        return new Error("Access denied to AI features");
       }
-      
+
       if (status === 404) {
-        return new Error('Resource not found');
+        return new Error("Resource not found");
       }
-      
+
       if (status >= 500) {
-        return new Error('AI service temporarily unavailable');
+        return new Error("AI service temporarily unavailable");
       }
-      
+
       return new Error(message);
     } else if (error.request) {
       // Network error
-      return new Error('Network error - please check your connection');
+      return new Error("Network error - please check your connection");
     } else {
       // Other error
-      return new Error(error.message || 'Unexpected error occurred');
+      return new Error(error.message || "Unexpected error occurred");
     }
   }
 
@@ -178,30 +178,35 @@ class AIService {
    */
   async batchProcess(operations) {
     try {
-      const promises = operations.map(op => {
+      const promises = operations.map((op) => {
         switch (op.type) {
-          case 'generateNames':
+          case "generateNames":
             return this.generatePlaylistNames(op.songs);
-          case 'recommend':
+          case "recommend":
             return this.getSongRecommendations(op.playlistId, op.preferences);
-          case 'analyze':
+          case "analyze":
             return this.analyzePlaylist(op.playlistId);
-          case 'generateDescription':
-            return this.generatePlaylistDescription(op.playlistId, op.updatePlaylist);
+          case "generateDescription":
+            return this.generatePlaylistDescription(
+              op.playlistId,
+              op.updatePlaylist
+            );
           default:
-            return Promise.reject(new Error(`Unknown operation type: ${op.type}`));
+            return Promise.reject(
+              new Error(`Unknown operation type: ${op.type}`)
+            );
         }
       });
 
       const results = await Promise.allSettled(promises);
       return results.map((result, index) => ({
         operation: operations[index],
-        success: result.status === 'fulfilled',
-        data: result.status === 'fulfilled' ? result.value : null,
-        error: result.status === 'rejected' ? result.reason.message : null
+        success: result.status === "fulfilled",
+        data: result.status === "fulfilled" ? result.value : null,
+        error: result.status === "rejected" ? result.reason.message : null,
       }));
     } catch (error) {
-      console.error('Error in batch processing:', error);
+      console.error("Error in batch processing:", error);
       throw this.handleError(error);
     }
   }
@@ -213,30 +218,34 @@ class AIService {
   getFeatureDescriptions() {
     return {
       playlistNames: {
-        title: 'Smart Playlist Names',
-        description: 'AI generates creative names based on your music selection',
-        icon: '🎯'
+        title: "Smart Playlist Names",
+        description:
+          "AI generates creative names based on your music selection",
+        icon: "🎯",
       },
       songRecommendations: {
-        title: 'Song Recommendations',
-        description: 'Get personalized song suggestions that fit your playlist vibe',
-        icon: '🎵'
+        title: "Song Recommendations",
+        description:
+          "Get personalized song suggestions that fit your playlist vibe",
+        icon: "🎵",
       },
       playlistAnalysis: {
-        title: 'Playlist Insights',
-        description: 'Discover patterns, moods, and themes in your music collection',
-        icon: '📊'
+        title: "Playlist Insights",
+        description:
+          "Discover patterns, moods, and themes in your music collection",
+        icon: "📊",
       },
       autoDescription: {
-        title: 'Auto Descriptions',
-        description: 'Generate engaging descriptions for sharing your playlists',
-        icon: '✍️'
+        title: "Auto Descriptions",
+        description:
+          "Generate engaging descriptions for sharing your playlists",
+        icon: "✍️",
       },
       smartPlaylists: {
-        title: 'Smart Playlists',
-        description: 'Create playlists automatically based on your preferences',
-        icon: '🤖'
-      }
+        title: "Smart Playlists",
+        description: "Create playlists automatically based on your preferences",
+        icon: "🤖",
+      },
     };
   }
 }

@@ -39,11 +39,7 @@ const validateRequest = (req, res, next) => {
 router.get(
   "/permissions/:playlistId",
   auth,
-  [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
-  ],
+  [param("playlistId").isMongoId().withMessage("Invalid playlist ID")],
   validateRequest,
   getUserPermissions
 );
@@ -57,16 +53,16 @@ router.post(
   "/collaborators/:playlistId",
   auth,
   [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
+    param("playlistId").isMongoId().withMessage("Invalid playlist ID"),
     body("userIdentifier")
       .notEmpty()
       .withMessage("User email or username is required"),
     body("role")
       .optional()
       .isIn(["viewer", "contributor", "editor", "admin"])
-      .withMessage("Invalid role. Must be: viewer, contributor, editor, or admin"),
+      .withMessage(
+        "Invalid role. Must be: viewer, contributor, editor, or admin"
+      ),
   ],
   validateRequest,
   addCollaborator
@@ -81,15 +77,13 @@ router.put(
   "/collaborators/:playlistId/:userId",
   auth,
   [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
-    param("userId")
-      .isMongoId()
-      .withMessage("Invalid user ID"),
+    param("playlistId").isMongoId().withMessage("Invalid playlist ID"),
+    param("userId").isMongoId().withMessage("Invalid user ID"),
     body("role")
       .isIn(["viewer", "contributor", "editor", "admin"])
-      .withMessage("Invalid role. Must be: viewer, contributor, editor, or admin"),
+      .withMessage(
+        "Invalid role. Must be: viewer, contributor, editor, or admin"
+      ),
   ],
   validateRequest,
   updateCollaboratorRole
@@ -104,12 +98,8 @@ router.delete(
   "/collaborators/:playlistId/:userId",
   auth,
   [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
-    param("userId")
-      .isMongoId()
-      .withMessage("Invalid user ID"),
+    param("playlistId").isMongoId().withMessage("Invalid playlist ID"),
+    param("userId").isMongoId().withMessage("Invalid user ID"),
   ],
   validateRequest,
   removeCollaborator
@@ -123,11 +113,7 @@ router.delete(
 router.get(
   "/collaborators/:playlistId",
   auth,
-  [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
-  ],
+  [param("playlistId").isMongoId().withMessage("Invalid playlist ID")],
   validateRequest,
   getCollaborators
 );
@@ -147,11 +133,7 @@ router.get("/roles", auth, getRoles);
 router.post(
   "/leave/:playlistId",
   auth,
-  [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
-  ],
+  [param("playlistId").isMongoId().withMessage("Invalid playlist ID")],
   validateRequest,
   leavePlaylist
 );
@@ -165,12 +147,8 @@ router.post(
   "/transfer-ownership/:playlistId",
   auth,
   [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
-    body("newOwnerId")
-      .isMongoId()
-      .withMessage("Invalid new owner ID"),
+    param("playlistId").isMongoId().withMessage("Invalid playlist ID"),
+    body("newOwnerId").isMongoId().withMessage("Invalid new owner ID"),
   ],
   validateRequest,
   transferOwnership

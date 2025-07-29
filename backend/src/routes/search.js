@@ -31,35 +31,39 @@ const validateRequest = (req, res, next) => {
  * @param   {string} artist - Artist name to search for
  * @returns {Object} 200 - Artist information from Last.fm
  */
-router.get("/lastfm/demo", [
-  query("artist")
-    .notEmpty()
-    .withMessage("Artist name is required")
-    .isLength({ min: 1, max: 100 })
-    .withMessage("Artist name must be between 1 and 100 characters"),
-  validateRequest,
-], async (req, res) => {
-  try {
-    const { artist } = req.query;
-    
-    // Call Last.fm API directly for demo
-    const artistInfo = await lastfmService.getArtistInfo(artist);
-    
-    res.json({
-      success: true,
-      message: `Artist information retrieved from Last.fm`,
-      api: "Last.fm API (Public)",
-      data: artistInfo
-    });
-  } catch (error) {
-    console.error("Last.fm demo error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to retrieve artist information from Last.fm",
-      error: error.message
-    });
+router.get(
+  "/lastfm/demo",
+  [
+    query("artist")
+      .notEmpty()
+      .withMessage("Artist name is required")
+      .isLength({ min: 1, max: 100 })
+      .withMessage("Artist name must be between 1 and 100 characters"),
+    validateRequest,
+  ],
+  async (req, res) => {
+    try {
+      const { artist } = req.query;
+
+      // Call Last.fm API directly for demo
+      const artistInfo = await lastfmService.getArtistInfo(artist);
+
+      res.json({
+        success: true,
+        message: `Artist information retrieved from Last.fm`,
+        api: "Last.fm API (Public)",
+        data: artistInfo,
+      });
+    } catch (error) {
+      console.error("Last.fm demo error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to retrieve artist information from Last.fm",
+        error: error.message,
+      });
+    }
   }
-});
+);
 
 // Apply auth middleware to all search routes (except public demos above)
 router.use(auth);
@@ -365,16 +369,16 @@ router.get("/spotify/callback", async (req, res) => {
  */
 router.get("/spotify/playlists", auth, async (req, res) => {
   try {
-    const accessToken = req.headers['x-spotify-token'];
-    
+    const accessToken = req.headers["x-spotify-token"];
+
     if (!accessToken) {
-      return res.status(401).json({ 
-        message: "Spotify access token required" 
+      return res.status(401).json({
+        message: "Spotify access token required",
       });
     }
 
     const playlists = await spotifyService.getUserPlaylists(accessToken);
-    
+
     res.json({
       success: true,
       data: { playlists },
@@ -382,8 +386,8 @@ router.get("/spotify/playlists", auth, async (req, res) => {
     });
   } catch (error) {
     console.error("Error getting Spotify playlists:", error);
-    res.status(500).json({ 
-      message: "Failed to get Spotify playlists" 
+    res.status(500).json({
+      message: "Failed to get Spotify playlists",
     });
   }
 });
@@ -400,15 +404,15 @@ router.get("/spotify/playlists", auth, async (req, res) => {
 router.post("/spotify/refresh", auth, async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    
+
     if (!refreshToken) {
-      return res.status(400).json({ 
-        message: "Refresh token required" 
+      return res.status(400).json({
+        message: "Refresh token required",
       });
     }
 
     const tokens = await spotifyService.refreshUserToken(refreshToken);
-    
+
     res.json({
       success: true,
       data: {
@@ -418,8 +422,8 @@ router.post("/spotify/refresh", auth, async (req, res) => {
     });
   } catch (error) {
     console.error("Error refreshing Spotify token:", error);
-    res.status(500).json({ 
-      message: "Failed to refresh Spotify token" 
+    res.status(500).json({
+      message: "Failed to refresh Spotify token",
     });
   }
 });

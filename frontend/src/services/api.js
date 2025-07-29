@@ -2,9 +2,7 @@ import axios from "axios";
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL:
-    process.env.REACT_APP_API_URL ||
-    "http://localhost:5000/api", // Use local backend for development
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5000/api", // Use local backend for development
   headers: {
     "Content-Type": "application/json",
   },

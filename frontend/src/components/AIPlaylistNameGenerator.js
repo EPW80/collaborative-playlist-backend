@@ -113,9 +113,11 @@ const AIPlaylistNameGenerator = ({
         Smart Playlist Names
         <Box sx={{ flexGrow: 1 }} />
         <Tooltip title="Regenerate suggestions">
-          <IconButton onClick={generateNames} disabled={loading}>
-            <RefreshIcon />
-          </IconButton>
+          <span>
+            <IconButton onClick={generateNames} disabled={loading}>
+              <RefreshIcon />
+            </IconButton>
+          </span>
         </Tooltip>
         <IconButton onClick={onClose}>
           <CloseIcon />

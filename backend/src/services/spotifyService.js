@@ -142,7 +142,7 @@ class SpotifyService {
     try {
       this.spotifyApi.setRefreshToken(refreshToken);
       const data = await this.spotifyApi.refreshAccessToken();
-      
+
       return {
         access_token: data.body.access_token,
         expires_in: data.body.expires_in,
@@ -157,8 +157,8 @@ class SpotifyService {
     try {
       this.spotifyApi.setAccessToken(accessToken);
       const data = await this.spotifyApi.getUserPlaylists();
-      
-      return data.body.items.map(playlist => ({
+
+      return data.body.items.map((playlist) => ({
         id: playlist.id,
         name: playlist.name,
         description: playlist.description,

@@ -101,7 +101,7 @@ class RealtimeService {
 
     // Set up database change streams for real-time updates
     this.setupDatabaseListeners();
-    
+
     // Set up periodic cleanup
     this.setupPeriodicCleanup();
   }
@@ -113,8 +113,8 @@ class RealtimeService {
     try {
       // Handle both old format (string) and new format (object)
       let playlistId, userId;
-      
-      if (typeof data === 'string') {
+
+      if (typeof data === "string") {
         // Old format: just playlistId string
         playlistId = data;
         userId = socket.userId; // Get from socket if available
@@ -125,7 +125,9 @@ class RealtimeService {
       }
 
       if (!userId) {
-        socket.emit("join-playlist-error", { message: "User not authenticated" });
+        socket.emit("join-playlist-error", {
+          message: "User not authenticated",
+        });
         return;
       }
 
@@ -197,8 +199,8 @@ class RealtimeService {
     try {
       // Handle both old format (string) and new format (object)
       let playlistId, userId;
-      
-      if (typeof data === 'string') {
+
+      if (typeof data === "string") {
         // Old format: just playlistId string
         playlistId = data;
         userId = socket.userId; // Get from socket if available
@@ -687,7 +689,7 @@ class RealtimeService {
 
       // Track who's editing what
       const editKey = `${playlistId}-${field}`;
-      
+
       socket.to(`playlist-${playlistId}`).emit("user-editing", {
         userId,
         field,
@@ -743,7 +745,9 @@ class RealtimeService {
       });
 
       // Log activity
-      console.log(`User ${userId} reordered song ${songId} in playlist ${playlistId}`);
+      console.log(
+        `User ${userId} reordered song ${songId} in playlist ${playlistId}`
+      );
     } catch (error) {
       console.error("Error handling song reorder:", error);
     }
@@ -772,20 +776,21 @@ class RealtimeService {
       };
 
       // Broadcast message to all users in playlist
-      this.io.to(`playlist-${playlistId}`).emit("playlist-message", messageData);
+      this.io
+        .to(`playlist-${playlistId}`)
+        .emit("playlist-message", messageData);
 
       // Cache recent messages
       const cacheKey = cacheService.keys.playlistMessages(playlistId);
-      let messages = await cacheService.get(cacheKey) || [];
+      let messages = (await cacheService.get(cacheKey)) || [];
       messages.push(messageData);
-      
+
       // Keep only last 50 messages
       if (messages.length > 50) {
         messages = messages.slice(-50);
       }
-      
-      await cacheService.set(cacheKey, messages, 3600); // 1 hour
 
+      await cacheService.set(cacheKey, messages, 3600); // 1 hour
     } catch (error) {
       console.error("Error handling playlist message:", error);
     }
@@ -813,7 +818,6 @@ class RealtimeService {
         presence,
         timestamp: new Date(),
       });
-
     } catch (error) {
       console.error("Error handling presence update:", error);
     }
@@ -842,9 +846,12 @@ class RealtimeService {
       if (now - userData.lastSeen > inactiveThreshold) {
         console.log(`Cleaning up inactive session for user ${userId}`);
         this.connectedUsers.delete(userId);
-        
+
         // Remove from playlist sessions
-        if (userData.playlistId && this.playlistSessions.has(userData.playlistId)) {
+        if (
+          userData.playlistId &&
+          this.playlistSessions.has(userData.playlistId)
+        ) {
           this.playlistSessions.get(userData.playlistId).delete(userId);
         }
       }

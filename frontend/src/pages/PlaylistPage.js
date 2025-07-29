@@ -397,10 +397,10 @@ function PlaylistPage() {
 
   // Track recently added songs to prevent duplicate processing
   const recentlyAddedSongs = useRef(new Set());
-  
+
   // Track if we're currently loading/playing audio to prevent race conditions
   const isAudioOperationInProgress = useRef(false);
-  
+
   // Track current audio operation to allow cancellation
   const currentAudioOperation = useRef(null);
 
@@ -466,7 +466,7 @@ function PlaylistPage() {
       if (currentAudioOperation.current) {
         currentAudioOperation.current.abort();
       }
-      
+
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("ended", handleEnded);
@@ -511,12 +511,16 @@ function PlaylistPage() {
 
   // Helper function to add a song with proper duplicate checking
   const addSongToPlaylist = useCallback((newSong, source = "unknown") => {
-    const songIdentifier = `${newSong._id || newSong.id}-${newSong.title}-${newSong.artist}`;
-    
+    const songIdentifier = `${newSong._id || newSong.id}-${newSong.title}-${
+      newSong.artist
+    }`;
+
     // Check if we recently processed this song (within last 2 seconds)
     if (recentlyAddedSongs.current.has(songIdentifier)) {
-      if (process.env.NODE_ENV === 'development') {
-        console.debug(`Song recently processed from ${source}, skipping duplicate`);
+      if (process.env.NODE_ENV === "development") {
+        console.debug(
+          `Song recently processed from ${source}, skipping duplicate`
+        );
       }
       return false;
     }
@@ -545,25 +549,33 @@ function PlaylistPage() {
       });
 
       if (songExists) {
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === "development") {
           console.debug(`Song already exists in playlist (${source})`);
         }
         return prev;
       }
 
-      console.log(`✅ Added song from ${source}:`, newSong.title, "by", newSong.artist);
+      console.log(
+        `✅ Added song from ${source}:`,
+        newSong.title,
+        "by",
+        newSong.artist
+      );
       return {
         ...prev,
         songs: [...(prev.songs || []), newSong],
       };
     });
-    
+
     return true;
   }, []);
 
-  const handleSongAdded = useCallback((newSong) => {
-    addSongToPlaylist(newSong, "MusicSearch");
-  }, [addSongToPlaylist]);
+  const handleSongAdded = useCallback(
+    (newSong) => {
+      addSongToPlaylist(newSong, "MusicSearch");
+    },
+    [addSongToPlaylist]
+  );
 
   const handleOpenMusicSearch = () => {
     setMusicSearchOpen(true);
@@ -778,7 +790,17 @@ function PlaylistPage() {
   };
 
   const handleOpenNameGenerator = () => {
-    setShowNameGenerator(true);
+    // Initialize editing playlist state with current playlist data
+    if (playlist) {
+      setEditingPlaylist({
+        name: playlist.name,
+        description: playlist.description,
+        isPublic: playlist.isPublic,
+      });
+      setShowNameGenerator(true);
+    } else {
+      showSnackbar("Please wait for playlist to load", "error");
+    }
   };
 
   const handleCloseNameGenerator = () => {
@@ -793,10 +815,26 @@ function PlaylistPage() {
     setShowRecommendations(false);
   };
 
-  const handleNameGenerated = (newName) => {
-    // Update playlist name with generated name
-    setEditingPlaylist({ ...editingPlaylist, name: newName });
-    setShowNameGenerator(false);
+  const handleNameGenerated = async (newName) => {
+    try {
+      if (!playlist || !id) {
+        showSnackbar("Playlist not found", "error");
+        return;
+      }
+
+      // Update playlist name with generated name
+      const updatedPlaylist = { ...editingPlaylist, name: newName };
+      setEditingPlaylist(updatedPlaylist);
+
+      // Save the name change to the database
+      const response = await playlistAPI.update(id, updatedPlaylist);
+      setPlaylist(response.data.data.playlist);
+      setShowNameGenerator(false);
+      showSnackbar("Playlist name updated successfully!");
+    } catch (error) {
+      console.error("Error updating playlist name:", error);
+      showSnackbar("Failed to update playlist name", "error");
+    }
   };
 
   const handleSongRecommended = (song) => {
@@ -930,9 +968,9 @@ function PlaylistPage() {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
         setIsPlaying(false);
-        
+
         // Wait for pause to complete and check if operation was cancelled
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         if (abortController.signal.aborted) return;
       }
 
@@ -959,7 +997,8 @@ function PlaylistPage() {
           "warning"
         );
         // Use a reliable demo audio file
-        audioUrl = "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3";
+        audioUrl =
+          "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3";
       }
       // For other sources, use demo audio
       else {
@@ -969,7 +1008,8 @@ function PlaylistPage() {
           "warning"
         );
         // Use a different demo audio file for variety
-        audioUrl = "https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg";
+        audioUrl =
+          "https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg";
       }
 
       if (!audioUrl) {
@@ -1016,7 +1056,7 @@ function PlaylistPage() {
         };
 
         // Handle cancellation
-        abortController.signal.addEventListener('abort', () => {
+        abortController.signal.addEventListener("abort", () => {
           cleanup();
           reject(new Error("Operation cancelled"));
         });
@@ -1047,15 +1087,17 @@ function PlaylistPage() {
         if (abortController.signal.aborted) return;
         throw playError;
       }
-
     } catch (error) {
       // Don't log errors for cancelled operations
-      if (abortController.signal.aborted || error.message === "Operation cancelled") {
+      if (
+        abortController.signal.aborted ||
+        error.message === "Operation cancelled"
+      ) {
         return;
       }
-      
+
       console.error("Error playing audio:", error);
-      
+
       // Filter out common browser errors
       if (error.name !== "AbortError" && error.name !== "NotAllowedError") {
         showSnackbar(
@@ -1075,7 +1117,12 @@ function PlaylistPage() {
   };
 
   const handlePlayPause = async () => {
-    console.log("🎮 handlePlayPause called, isPlaying:", isPlaying, "currentSong:", currentSong);
+    console.log(
+      "🎮 handlePlayPause called, isPlaying:",
+      isPlaying,
+      "currentSong:",
+      currentSong
+    );
     if (!audioRef.current || !currentSong) {
       console.error("❌ No audioRef or currentSong available");
       return;
@@ -1089,7 +1136,9 @@ function PlaylistPage() {
 
     // Prevent concurrent audio operations
     if (isAudioOperationInProgress.current) {
-      console.debug("Audio operation in progress, completing current operation first");
+      console.debug(
+        "Audio operation in progress, completing current operation first"
+      );
       return;
     }
 
@@ -1233,7 +1282,7 @@ function PlaylistPage() {
                   e.preventDefault();
                   e.stopPropagation();
                   const target = e.currentTarget;
-                  
+
                   // Ensure the element is still in the DOM before setting as anchor
                   if (target && target.parentNode && target.isConnected) {
                     setMenuAnchor(target);
@@ -1433,10 +1482,17 @@ function PlaylistPage() {
                                     e.preventDefault();
                                     e.stopPropagation();
                                     const target = e.currentTarget;
-                                    
+
                                     // Ensure the element is still in the DOM before setting as anchor
-                                    if (target && target.parentNode && target.isConnected) {
-                                      console.log("Setting selected song:", song);
+                                    if (
+                                      target &&
+                                      target.parentNode &&
+                                      target.isConnected
+                                    ) {
+                                      console.log(
+                                        "Setting selected song:",
+                                        song
+                                      );
                                       console.log(
                                         "Song ID:",
                                         song._id || song.id

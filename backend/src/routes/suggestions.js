@@ -38,9 +38,7 @@ router.post(
   "/:playlistId",
   auth,
   [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
+    param("playlistId").isMongoId().withMessage("Invalid playlist ID"),
     body("title")
       .trim()
       .notEmpty()
@@ -62,23 +60,14 @@ router.post(
       .optional()
       .isInt({ min: 1, max: 7200 })
       .withMessage("Duration must be between 1 and 7200 seconds"),
-    body("spotifyId")
-      .optional()
-      .trim(),
-    body("youtubeId")
-      .optional()
-      .trim(),
-    body("geniusId")
-      .optional()
-      .trim(),
+    body("spotifyId").optional().trim(),
+    body("youtubeId").optional().trim(),
+    body("geniusId").optional().trim(),
     body("previewUrl")
       .optional()
       .isURL()
       .withMessage("Preview URL must be valid"),
-    body("imageUrl")
-      .optional()
-      .isURL()
-      .withMessage("Image URL must be valid"),
+    body("imageUrl").optional().isURL().withMessage("Image URL must be valid"),
   ],
   validateRequest,
   submitSuggestion
@@ -93,9 +82,7 @@ router.get(
   "/:playlistId",
   auth,
   [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
+    param("playlistId").isMongoId().withMessage("Invalid playlist ID"),
     query("status")
       .optional()
       .isIn(["pending", "approved", "rejected"])
@@ -114,12 +101,8 @@ router.post(
   "/:playlistId/:suggestionId/approve",
   auth,
   [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
-    param("suggestionId")
-      .isMongoId()
-      .withMessage("Invalid suggestion ID"),
+    param("playlistId").isMongoId().withMessage("Invalid playlist ID"),
+    param("suggestionId").isMongoId().withMessage("Invalid suggestion ID"),
     body("reviewNote")
       .optional()
       .trim()
@@ -139,12 +122,8 @@ router.post(
   "/:playlistId/:suggestionId/reject",
   auth,
   [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
-    param("suggestionId")
-      .isMongoId()
-      .withMessage("Invalid suggestion ID"),
+    param("playlistId").isMongoId().withMessage("Invalid playlist ID"),
+    param("suggestionId").isMongoId().withMessage("Invalid suggestion ID"),
     body("reviewNote")
       .optional()
       .trim()
@@ -164,12 +143,8 @@ router.delete(
   "/:playlistId/:suggestionId",
   auth,
   [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
-    param("suggestionId")
-      .isMongoId()
-      .withMessage("Invalid suggestion ID"),
+    param("playlistId").isMongoId().withMessage("Invalid playlist ID"),
+    param("suggestionId").isMongoId().withMessage("Invalid suggestion ID"),
   ],
   validateRequest,
   deleteSuggestion
@@ -183,11 +158,7 @@ router.delete(
 router.get(
   "/my-suggestions/:playlistId",
   auth,
-  [
-    param("playlistId")
-      .isMongoId()
-      .withMessage("Invalid playlist ID"),
-  ],
+  [param("playlistId").isMongoId().withMessage("Invalid playlist ID")],
   validateRequest,
   getMySuggestions
 );
