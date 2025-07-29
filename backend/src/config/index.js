@@ -8,10 +8,13 @@ const config = {
     frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
     redis: {
       enabled: process.env.REDIS_OPTIONAL !== 'true',
+      required: process.env.REDIS_REQUIRED === 'true', // New flag for production
       host: process.env.REDIS_HOST || "localhost",
       port: process.env.REDIS_PORT || 6379,
       password: process.env.REDIS_PASSWORD,
       db: process.env.REDIS_DB || 0,
+      maxRetriesPerRequest: 3,
+      retryDelayOnFailover: 100,
     },
     spotify: {
       clientId: process.env.SPOTIFY_CLIENT_ID,

@@ -69,6 +69,30 @@ class RealtimeService {
         await this.handleNotification(socket, data);
       });
 
+      // Live playlist editing
+      socket.on("playlist-edit-start", async (data) => {
+        await this.handlePlaylistEditStart(socket, data);
+      });
+
+      socket.on("playlist-edit-end", async (data) => {
+        await this.handlePlaylistEditEnd(socket, data);
+      });
+
+      // Song reordering
+      socket.on("song-reorder", async (data) => {
+        await this.handleSongReorder(socket, data);
+      });
+
+      // Live chat in playlists
+      socket.on("playlist-message", async (data) => {
+        await this.handlePlaylistMessage(socket, data);
+      });
+
+      // Presence updates
+      socket.on("user-presence", async (data) => {
+        await this.handlePresenceUpdate(socket, data);
+      });
+
       // Disconnect handling
       socket.on("disconnect", () => {
         this.handleDisconnect(socket);
@@ -77,6 +101,9 @@ class RealtimeService {
 
     // Set up database change streams for real-time updates
     this.setupDatabaseListeners();
+    
+    // Set up periodic cleanup
+    this.setupPeriodicCleanup();
   }
 
   /**
@@ -599,6 +626,197 @@ class RealtimeService {
       data,
       timestamp: new Date(),
     });
+  }
+
+  /**
+   * Handle live playlist editing sessions
+   */
+  async handlePlaylistEditStart(socket, { playlistId, field }) {
+    try {
+      const userId = socket.userId;
+      if (!userId) return;
+
+      const hasAccess = await this.validatePlaylistAccess(userId, playlistId);
+      if (!hasAccess) {
+        socket.emit("edit-error", { message: "Access denied" });
+        return;
+      }
+
+      // Track who's editing what
+      const editKey = `${playlistId}-${field}`;
+      
+      socket.to(`playlist-${playlistId}`).emit("user-editing", {
+        userId,
+        field,
+        editing: true,
+        timestamp: new Date(),
+      });
+
+      socket.editingField = editKey;
+    } catch (error) {
+      console.error("Error handling edit start:", error);
+    }
+  }
+
+  async handlePlaylistEditEnd(socket, { playlistId, field }) {
+    try {
+      const userId = socket.userId;
+      if (!userId) return;
+
+      socket.to(`playlist-${playlistId}`).emit("user-editing", {
+        userId,
+        field,
+        editing: false,
+        timestamp: new Date(),
+      });
+
+      socket.editingField = null;
+    } catch (error) {
+      console.error("Error handling edit end:", error);
+    }
+  }
+
+  /**
+   * Handle real-time song reordering
+   */
+  async handleSongReorder(socket, { playlistId, oldIndex, newIndex, songId }) {
+    try {
+      const userId = socket.userId;
+      if (!userId) return;
+
+      const hasAccess = await this.validatePlaylistAccess(userId, playlistId);
+      if (!hasAccess) {
+        socket.emit("reorder-error", { message: "Access denied" });
+        return;
+      }
+
+      // Broadcast reorder to all users in playlist
+      socket.to(`playlist-${playlistId}`).emit("song-reordered", {
+        userId,
+        songId,
+        oldIndex,
+        newIndex,
+        timestamp: new Date(),
+      });
+
+      // Log activity
+      console.log(`User ${userId} reordered song ${songId} in playlist ${playlistId}`);
+    } catch (error) {
+      console.error("Error handling song reorder:", error);
+    }
+  }
+
+  /**
+   * Handle playlist chat messages
+   */
+  async handlePlaylistMessage(socket, { playlistId, message, type = "chat" }) {
+    try {
+      const userId = socket.userId;
+      if (!userId) return;
+
+      const hasAccess = await this.validatePlaylistAccess(userId, playlistId);
+      if (!hasAccess) {
+        socket.emit("message-error", { message: "Access denied" });
+        return;
+      }
+
+      const messageData = {
+        id: Date.now().toString(),
+        userId,
+        message: message.trim(),
+        type,
+        timestamp: new Date(),
+      };
+
+      // Broadcast message to all users in playlist
+      this.io.to(`playlist-${playlistId}`).emit("playlist-message", messageData);
+
+      // Cache recent messages
+      const cacheKey = cacheService.keys.playlistMessages(playlistId);
+      let messages = await cacheService.get(cacheKey) || [];
+      messages.push(messageData);
+      
+      // Keep only last 50 messages
+      if (messages.length > 50) {
+        messages = messages.slice(-50);
+      }
+      
+      await cacheService.set(cacheKey, messages, 3600); // 1 hour
+
+    } catch (error) {
+      console.error("Error handling playlist message:", error);
+    }
+  }
+
+  /**
+   * Handle user presence updates
+   */
+  async handlePresenceUpdate(socket, { playlistId, presence }) {
+    try {
+      const userId = socket.userId;
+      if (!userId) return;
+
+      // Update user presence in session
+      if (this.connectedUsers.has(userId)) {
+        const userData = this.connectedUsers.get(userId);
+        userData.presence = presence;
+        userData.lastSeen = new Date();
+        this.connectedUsers.set(userId, userData);
+      }
+
+      // Broadcast presence to playlist
+      socket.to(`playlist-${playlistId}`).emit("user-presence", {
+        userId,
+        presence,
+        timestamp: new Date(),
+      });
+
+    } catch (error) {
+      console.error("Error handling presence update:", error);
+    }
+  }
+
+  /**
+   * Set up periodic cleanup
+   */
+  setupPeriodicCleanup() {
+    // Clean up inactive sessions every 5 minutes
+    setInterval(() => {
+      this.cleanupInactiveSessions();
+    }, 300000);
+
+    // Update session stats every minute
+    setInterval(() => {
+      this.updateSessionStats();
+    }, 60000);
+  }
+
+  cleanupInactiveSessions() {
+    const now = Date.now();
+    const inactiveThreshold = 30 * 60 * 1000; // 30 minutes
+
+    for (const [userId, userData] of this.connectedUsers.entries()) {
+      if (now - userData.lastSeen > inactiveThreshold) {
+        console.log(`Cleaning up inactive session for user ${userId}`);
+        this.connectedUsers.delete(userId);
+        
+        // Remove from playlist sessions
+        if (userData.playlistId && this.playlistSessions.has(userData.playlistId)) {
+          this.playlistSessions.get(userData.playlistId).delete(userId);
+        }
+      }
+    }
+  }
+
+  updateSessionStats() {
+    const stats = {
+      connectedUsers: this.connectedUsers.size,
+      activePlaylists: this.playlistSessions.size,
+      timestamp: new Date(),
+    };
+
+    // Emit to admin dashboard if needed
+    this.io.emit("session-stats", stats);
   }
 
   notifySongAdded(playlistId, song, addedBy) {

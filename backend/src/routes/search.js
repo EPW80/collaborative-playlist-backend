@@ -337,18 +337,90 @@ router.get("/spotify/callback", async (req, res) => {
 
     const tokens = await spotifyService.exchangeCodeForToken(code);
 
-    // Store tokens securely (in your user model or session)
-    // This is a simplified example
+    // Store tokens securely (you should store these in your user model)
+    // For now, we'll just return success with limited token info
     res.json({
       message: "Spotify authorization successful",
-      // Don't send actual tokens to client in production
       hasAccess: true,
+      expiresIn: tokens.expires_in,
+      // Note: Don't send actual tokens to client in production
+      // Store them server-side associated with the user
     });
   } catch (error) {
     console.error("Error in Spotify callback:", error);
     res
       .status(500)
       .json({ message: "Failed to complete Spotify authorization" });
+  }
+});
+
+/**
+ * @route   GET /api/search/spotify/playlists
+ * @desc    Get user's Spotify playlists (requires OAuth)
+ * @access  Private
+ * @param   {string} accessToken - User's Spotify access token (in header)
+ * @returns {Object} 200 - User's Spotify playlists
+ * @returns {Object} 401 - Unauthorized or invalid token
+ * @returns {Object} 500 - Server error
+ */
+router.get("/spotify/playlists", auth, async (req, res) => {
+  try {
+    const accessToken = req.headers['x-spotify-token'];
+    
+    if (!accessToken) {
+      return res.status(401).json({ 
+        message: "Spotify access token required" 
+      });
+    }
+
+    const playlists = await spotifyService.getUserPlaylists(accessToken);
+    
+    res.json({
+      success: true,
+      data: { playlists },
+      count: playlists.length,
+    });
+  } catch (error) {
+    console.error("Error getting Spotify playlists:", error);
+    res.status(500).json({ 
+      message: "Failed to get Spotify playlists" 
+    });
+  }
+});
+
+/**
+ * @route   POST /api/search/spotify/refresh
+ * @desc    Refresh Spotify access token
+ * @access  Private
+ * @param   {string} refreshToken - User's Spotify refresh token
+ * @returns {Object} 200 - New access token
+ * @returns {Object} 400 - Missing refresh token
+ * @returns {Object} 500 - Server error
+ */
+router.post("/spotify/refresh", auth, async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).json({ 
+        message: "Refresh token required" 
+      });
+    }
+
+    const tokens = await spotifyService.refreshUserToken(refreshToken);
+    
+    res.json({
+      success: true,
+      data: {
+        accessToken: tokens.access_token,
+        expiresIn: tokens.expires_in,
+      },
+    });
+  } catch (error) {
+    console.error("Error refreshing Spotify token:", error);
+    res.status(500).json({ 
+      message: "Failed to refresh Spotify token" 
+    });
   }
 });
 

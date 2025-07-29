@@ -84,6 +84,10 @@ export const searchAPI = {
   getTrackById: (service, id) => api.get(`/search/track/${service}/${id}`),
   spotifyAuth: () => api.get("/search/spotify/auth"),
   spotifyCallback: (code) => api.get(`/search/spotify/callback?code=${code}`),
+  spotifyPlaylists: (accessToken) => api.get("/search/spotify/playlists", {
+    headers: { 'x-spotify-token': accessToken }
+  }),
+  spotifyRefresh: (refreshToken) => api.post("/search/spotify/refresh", { refreshToken }),
   lastfmDemo: () => api.get("/search/lastfm/demo"),
 };
 

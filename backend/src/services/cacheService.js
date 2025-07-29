@@ -13,8 +13,9 @@ class CacheService {
     this.client = null;
     this.isConnected = false;
     this.retryAttempts = 0;
-    this.maxRetries = 10; // Reduced max retries
+    this.maxRetries = 10;
     this.isRedisOptional = process.env.REDIS_OPTIONAL === "true";
+    this.isRedisRequired = config.redis?.required || false;
 
     // Performance metrics
     this.metrics = {
@@ -25,6 +26,7 @@ class CacheService {
       errors: 0,
       totalResponseTime: 0,
       requestCount: 0,
+      cacheHitRate: 0,
     };
 
     // Cache key generators
@@ -44,6 +46,9 @@ class CacheService {
       userAuth: (userId) => `auth:${userId}`,
       song: (songId) => `song:${songId}`,
       spotifyTrack: (trackId) => `spotify:track:${trackId}`,
+      spotifySearch: (query, limit) =>
+        `spotify:search:${Buffer.from(query).toString("base64")}:${limit}`,
+      spotifyUserPlaylists: (userId) => `spotify:user:${userId}:playlists`,
       lastfmArtist: (artistName) =>
         `lastfm:artist:${Buffer.from(artistName).toString("base64")}`,
       // Genius API cache keys
@@ -58,6 +63,7 @@ class CacheService {
       geniusTrending: (limit) => `genius:trending:${limit}`,
       // Real-time collaboration cache keys
       playlistSession: (playlistId) => `session:playlist:${playlistId}:users`,
+      playlistMessages: (playlistId) => `messages:playlist:${playlistId}`,
       playlistCursors: (playlistId) => `session:playlist:${playlistId}:cursors`,
       nowPlaying: (playlistId) => `session:playlist:${playlistId}:nowplaying`,
       songVotes: (songId) => `votes:song:${songId}`,
@@ -74,7 +80,12 @@ class CacheService {
    */
   async connect() {
     try {
-      // Skip Redis connection if disabled
+      // Check if Redis is required but not configured
+      if (this.isRedisRequired && (!config.redis?.enabled || this.isRedisOptional)) {
+        throw new Error("Redis is required but not properly configured. Set REDIS_REQUIRED=true and ensure Redis is available.");
+      }
+
+      // Skip Redis connection if disabled and not required
       if (!config.redis?.enabled || this.isRedisOptional) {
         console.log("⚠️  Redis disabled - running without cache");
         return;
@@ -86,10 +97,15 @@ class CacheService {
           port: config.redis?.port || 6379,
           reconnectStrategy: (retries) => {
             if (retries >= this.maxRetries) {
-              console.log(
-                `❌ Redis max retries (${this.maxRetries}) reached. Disabling Redis.`
-              );
-              return false; // Stop reconnecting
+              const errorMsg = `❌ Redis max retries (${this.maxRetries}) reached.`;
+              
+              if (this.isRedisRequired) {
+                console.error(errorMsg + " Application cannot continue without Redis.");
+                process.exit(1); // Exit if Redis is required
+              } else {
+                console.log(errorMsg + " Disabling Redis.");
+                return false; // Stop reconnecting if optional
+              }
             }
             return Math.min(retries * 50, 500);
           },
@@ -106,14 +122,24 @@ class CacheService {
         console.log("✅ Redis connected and ready");
         this.isConnected = true;
         this.retryAttempts = 0;
+        
+        // Update cache hit rate periodically
+        this.updateMetrics();
       });
 
       this.client.on("error", (err) => {
         console.error("❌ Redis connection error:", err.message);
         this.isConnected = false;
         this.metrics.errors++;
+        this.retryAttempts++;
 
-        // If too many errors, disable Redis
+        // If Redis is required, fail fast
+        if (this.isRedisRequired) {
+          console.error("🚨 Redis is required but connection failed. Application cannot continue.");
+          process.exit(1);
+        }
+
+        // If too many errors and Redis is optional, disable it
         if (this.retryAttempts >= this.maxRetries) {
           console.log(
             "🔄 Disabling Redis due to persistent connection failures"
@@ -396,6 +422,18 @@ class CacheService {
   }
 
   /**
+   * Update cache hit rate periodically
+   */
+  updateMetrics() {
+    setInterval(() => {
+      const totalRequests = this.metrics.hits + this.metrics.misses;
+      this.metrics.cacheHitRate = totalRequests > 0 
+        ? Math.round((this.metrics.hits / totalRequests) * 100) 
+        : 0;
+    }, 60000); // Update every minute
+  }
+
+  /**
    * Reset performance metrics
    */
   resetMetrics() {
@@ -407,6 +445,7 @@ class CacheService {
       errors: 0,
       totalResponseTime: 0,
       requestCount: 0,
+      cacheHitRate: 0,
     };
   }
 }
