@@ -319,7 +319,7 @@ const createSmartPlaylist = async (req, res) => {
     const playlist = new Playlist({
       name: playlistName,
       description: autoDescription ? description : req.body.description || '',
-      owner: userId,
+      creator: userId,
       songs: [], // Would be populated with recommended songs
       tags: preferences.genres || [],
       isPublic: req.body.isPublic || false,

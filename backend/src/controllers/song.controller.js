@@ -107,7 +107,7 @@ exports.addSong = asyncHandler(async (req, res, next) => {
 
   // Check for duplicates if not allowed
   if (!playlist.settings.allowDuplicates) {
-    // Check for duplicates by title + artist OR by spotifyId (if provided)
+    // Check for duplicates by title + artist OR by spotifyId (if provided and not empty)
     const duplicateQuery = {
       playlist: playlistId,
       $or: [
@@ -118,7 +118,7 @@ exports.addSong = asyncHandler(async (req, res, next) => {
       ],
     };
 
-    // If spotifyId is provided, also check for duplicate spotifyId
+    // If spotifyId is provided and not empty, also check for duplicate spotifyId
     if (spotifyId && spotifyId.trim() !== "") {
       duplicateQuery.$or.push({
         spotifyId: spotifyId.trim(),
@@ -129,7 +129,9 @@ exports.addSong = asyncHandler(async (req, res, next) => {
 
     if (existingSong) {
       const duplicateReason =
-        existingSong.spotifyId === (spotifyId && spotifyId.trim())
+        existingSong.spotifyId && 
+        spotifyId && 
+        existingSong.spotifyId === spotifyId.trim()
           ? "This song (same Spotify track)"
           : `"${title}" by ${artist}`;
 

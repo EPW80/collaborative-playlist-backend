@@ -6,26 +6,18 @@ const mongoSanitize = require("express-mongo-sanitize");
 const xss = require("xss-clean");
 
 /**
- * @fileoverview Security middleware configuration
- * @module middleware/security
- * @requires helmet
- * @requires morgan
- * @requires compression
- * @requires express-rate-limit
- * @requires express-mongo-sanitize
- * @requires xss-clean
+ * Configure security middleware for the Express app
+ * @param {import('express').Application} app - Express application instance
  */
-
-// Security middleware configuration
-const securityMiddleware = (app) => {
-  // Use Helmet for security headers
+module.exports = (app) => {
+  // Set security headers
   app.use(
     helmet({
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:", "https:"],
           connectSrc: ["'self'", "wss:", "ws:"],
         },
@@ -50,36 +42,34 @@ const securityMiddleware = (app) => {
     app.use(morgan("dev"));
   }
 
-  // General rate limiting
-  const generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    message: {
-      error: "Too many requests from this IP, please try again later.",
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    // Trust proxy is handled at app level
-    trustProxy: false, // Let app.set('trust proxy') handle this
-  });
+  // Disabled rate limiting in development to prevent CORS/429 issues
+  if (process.env.NODE_ENV === "production") {
+    // General rate limiting
+    const generalLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // requests per window
+      message: {
+        error: "Too many requests from this IP, please try again later.",
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+      trustProxy: false,
+    });
 
-  app.use("/api/", generalLimiter);
+    app.use("/api/", generalLimiter);
 
-  // Strict rate limiting for auth endpoints
-  const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // limit each IP to 5 requests per windowMs
-    message: {
-      error: "Too many authentication attempts, please try again later.",
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    // Trust proxy is handled at app level
-    trustProxy: false, // Let app.set('trust proxy') handle this
-  });
+    // Auth rate limiting
+    const authLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 5, // requests per window
+      message: {
+        error: "Too many authentication attempts, please try again later.",
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+      trustProxy: false,
+    });
 
-  app.use("/api/auth/login", authLimiter);
-  app.use("/api/auth/register", authLimiter);
+    app.use("/api/auth/", authLimiter);
+  }
 };
-
-module.exports = securityMiddleware;

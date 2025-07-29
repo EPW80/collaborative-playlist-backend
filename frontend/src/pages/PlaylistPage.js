@@ -970,9 +970,9 @@ function PlaylistPage() {
         // 210 seconds = 3 minutes 30 seconds (average song length)
         duration: song.duration || 210,
         playlistId: id,
-        // For AI recommendations, we might not have Spotify ID or external URL
-        spotifyId: song.spotifyId || "",
-        externalUrl: song.externalUrl || "",
+        // For AI recommendations, only include spotifyId if it exists and is valid
+        ...(song.spotifyId && song.spotifyId.trim() !== "" && { spotifyId: song.spotifyId }),
+        ...(song.externalUrl && song.externalUrl.trim() !== "" && { externalUrl: song.externalUrl }),
         // Mark as AI-recommended with additional metadata
         metadata: {
           aiRecommended: true,

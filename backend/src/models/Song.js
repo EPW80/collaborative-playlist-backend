@@ -108,8 +108,9 @@ const songSchema = new mongoose.Schema(
 songSchema.index({ playlist: 1, order: 1 });
 songSchema.index({ playlist: 1, addedAt: -1 });
 songSchema.index({ title: "text", artist: "text", album: "text" }); // Text search
-// Compound unique index for spotifyId within each playlist (allows same song in different playlists)
-songSchema.index({ playlist: 1, spotifyId: 1 }, { unique: true, sparse: true });
+// Note: Removed compound unique index for spotifyId to avoid issues with null values
+// Duplicate checking is handled in application logic instead
+songSchema.index({ playlist: 1, spotifyId: 1 }); // Non-unique index for performance
 songSchema.index({ youtubeId: 1 }, { sparse: true });
 songSchema.index({ addedBy: 1, addedAt: -1 });
 // Compound index for playlist queries with ordering
