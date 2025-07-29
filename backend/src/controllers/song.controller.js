@@ -93,17 +93,35 @@ exports.addSong = asyncHandler(async (req, res, next) => {
 
   // Check for duplicates if not allowed
   if (!playlist.settings.allowDuplicates) {
-    const existingSong = await Song.findOne({
+    // Check for duplicates by title + artist OR by spotifyId (if provided)
+    const duplicateQuery = {
       playlist: playlistId,
-      title: title,
-      artist: artist,
-    });
+      $or: [
+        {
+          title: title,
+          artist: artist,
+        }
+      ]
+    };
+    
+    // If spotifyId is provided, also check for duplicate spotifyId
+    if (spotifyId && spotifyId.trim() !== "") {
+      duplicateQuery.$or.push({
+        spotifyId: spotifyId.trim()
+      });
+    }
+    
+    const existingSong = await Song.findOne(duplicateQuery);
 
     if (existingSong) {
-      return res.status(400).json({
+      const duplicateReason = existingSong.spotifyId === (spotifyId && spotifyId.trim()) ? 
+        "This song (same Spotify track)" : 
+        `"${title}" by ${artist}`;
+        
+      return res.status(409).json({
         success: false,
         error: "Song already exists in playlist",
-        message: `"${title}" by ${artist} is already in this playlist`,
+        message: `${duplicateReason} is already in this playlist`,
         code: "DUPLICATE_SONG",
         data: {
           existingSong: {

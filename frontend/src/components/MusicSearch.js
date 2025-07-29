@@ -216,7 +216,7 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
           errorMessage = validationErrors.map(error => error.msg || error.message || error).join(", ");
         }
       } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
+        errorMessage = String(err.response.data.message);
         
         // Check if this is a duplicate song warning rather than an error
         if (errorMessage.toLowerCase().includes("already exists") || 
@@ -224,7 +224,14 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
           isWarning = true;
         }
       } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
+        // Handle error object or string
+        if (typeof err.response.data.error === 'object') {
+          errorMessage = err.response.data.error.message || 
+                        err.response.data.error.msg || 
+                        JSON.stringify(err.response.data.error);
+        } else {
+          errorMessage = String(err.response.data.error);
+        }
         
         // Check if this is a duplicate song warning rather than an error
         if (errorMessage.toLowerCase().includes("already exists") || 
@@ -232,7 +239,7 @@ function MusicSearch({ open, onClose, playlistId, onSongAdded, existingSongs = [
           isWarning = true;
         }
       } else if (err.message) {
-        errorMessage = err.message;
+        errorMessage = String(err.message);
       }
       
       // For duplicate songs, show a friendlier message and remove from results

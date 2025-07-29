@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Container,
   Typography,
@@ -34,6 +34,11 @@ import {
   Checkbox,
   Alert,
   Snackbar,
+  Select,
+  FormControl,
+  InputLabel,
+  ListItemIcon,
+  CircularProgress,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -56,9 +61,12 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   MoreVert as MoreVertIcon,
+  PersonAdd as PersonAddIcon,
+  Email as EmailIcon,
+  AccountCircle as AccountCircleIcon,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
-import { playlistAPI, songAPI } from "../services/api";
+import { playlistAPI, songAPI, rbacAPI } from "../services/api";
 import socketService from "../services/websocket";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import MusicSearch from "../components/MusicSearch";
@@ -188,18 +196,35 @@ const PlaylistSkeleton = () => (
 );
 
 // Enhanced Song Player Component
-const SongPlayer = ({ currentSong, isPlaying, onPlayPause, darkMode }) => {
-  const [volume, setVolume] = useState(50);
-  const [progress, setProgress] = useState(0);
+const SongPlayer = ({
+  currentSong,
+  isPlaying,
+  onPlayPause,
+  darkMode,
+  currentTime = 0,
+  duration = 0,
+  volume = 50,
+  onVolumeChange,
+  onSeek,
+  isLoading = false,
+}) => {
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (isPlaying) {
-        setProgress((prev) => (prev >= 100 ? 0 : prev + 1));
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isPlaying]);
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const handleProgressClick = (event) => {
+    if (!duration || !onSeek) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const width = rect.width;
+    const newTime = (clickX / width) * duration;
+    onSeek(newTime);
+  };
 
   return (
     <Fade in={true} timeout={500}>
@@ -219,8 +244,10 @@ const SongPlayer = ({ currentSong, isPlaying, onPlayPause, darkMode }) => {
         <LinearProgress
           variant="determinate"
           value={progress}
+          onClick={handleProgressClick}
           sx={{
-            height: 2,
+            height: 4,
+            cursor: "pointer",
             "& .MuiLinearProgress-bar": {
               background: darkMode
                 ? "linear-gradient(90deg, #00e676, #00c853)"
@@ -238,7 +265,11 @@ const SongPlayer = ({ currentSong, isPlaying, onPlayPause, darkMode }) => {
                 : "linear-gradient(135deg, #1976d2, #1565c0)",
             }}
           >
-            <AccountTree />
+            {isLoading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              <AccountTree />
+            )}
           </Avatar>
 
           <Box sx={{ flexGrow: 1 }}>
@@ -248,6 +279,11 @@ const SongPlayer = ({ currentSong, isPlaying, onPlayPause, darkMode }) => {
             <Typography variant="body2" color="text.secondary">
               {currentSong?.artist || "Unknown Artist"}
             </Typography>
+            {duration > 0 && (
+              <Typography variant="caption" color="text.secondary">
+                {formatTime(currentTime)} / {formatTime(duration)}
+              </Typography>
+            )}
           </Box>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -257,13 +293,20 @@ const SongPlayer = ({ currentSong, isPlaying, onPlayPause, darkMode }) => {
             <IconButton
               color="primary"
               onClick={onPlayPause}
+              disabled={!currentSong || isLoading}
               sx={{
                 transform: "scale(1.2)",
                 transition: "transform 0.2s ease-in-out",
                 "&:hover": { transform: "scale(1.3)" },
               }}
             >
-              {isPlaying ? <Pause /> : <PlayArrow />}
+              {isLoading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : isPlaying ? (
+                <Pause />
+              ) : (
+                <PlayArrow />
+              )}
             </IconButton>
             <IconButton color="primary">
               <SkipNext />
@@ -282,7 +325,7 @@ const SongPlayer = ({ currentSong, isPlaying, onPlayPause, darkMode }) => {
             <Slider
               size="small"
               value={volume}
-              onChange={(_, value) => setVolume(value)}
+              onChange={(_, value) => onVolumeChange && onVolumeChange(value)}
               sx={{
                 "& .MuiSlider-thumb": {
                   background: darkMode ? "#00e676" : "#1976d2",
@@ -311,43 +354,172 @@ function PlaylistPage() {
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [musicSearchOpen, setMusicSearchOpen] = useState(false);
-  
+
   // CRUD operation states
   const [editPlaylistOpen, setEditPlaylistOpen] = useState(false);
   const [deletePlaylistOpen, setDeletePlaylistOpen] = useState(false);
   const [editingPlaylist, setEditingPlaylist] = useState({});
-  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [songMenuAnchor, setSongMenuAnchor] = useState(null);
   const [selectedSong, setSelectedSong] = useState(null);
 
-  const handleSongAdded = (newSong) => {
+  // Collaborator management states
+  const [collaboratorManageOpen, setCollaboratorManageOpen] = useState(false);
+  const [addCollaboratorOpen, setAddCollaboratorOpen] = useState(false);
+  const [newCollaborator, setNewCollaborator] = useState({
+    email: "",
+    username: "",
+    role: "viewer",
+  });
+  const [collaboratorLoading, setCollaboratorLoading] = useState(false);
+  const [collaboratorErrors, setCollaboratorErrors] = useState({});
+
+  // Audio playback states
+  const audioRef = useRef(null);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [volume, setVolume] = useState(50);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Track recently added songs to prevent duplicate processing
+  const recentlyAddedSongs = useRef(new Set());
+  
+  // Track if we're currently loading/playing audio to prevent race conditions
+  const isAudioOperationInProgress = useRef(false);
+
+  // Helper functions
+  const showSnackbar = useCallback((message, severity = "success") => {
+    setSnackbar({ open: true, message, severity });
+  }, []);
+
+  // Initialize audio element
+  useEffect(() => {
+    const audio = new Audio();
+    audioRef.current = audio;
+
+    // Audio event listeners
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration);
+      setIsLoading(false);
+    };
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+      // Note: Auto-play next song would be handled by parent component
+    };
+
+    const handleLoadStart = () => {
+      setIsLoading(true);
+    };
+
+    const handleCanPlay = () => {
+      setIsLoading(false);
+    };
+
+    const handleError = (e) => {
+      console.error("Audio error:", e);
+      setIsLoading(false);
+      setIsPlaying(false);
+      // Reset audio operation flag on error
+      isAudioOperationInProgress.current = false;
+      showSnackbar(
+        "Error playing audio. This song may not have a preview available.",
+        "error"
+      );
+    };
+
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("loadstart", handleLoadStart);
+    audio.addEventListener("canplay", handleCanPlay);
+    audio.addEventListener("error", handleError);
+
+    return () => {
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("loadstart", handleLoadStart);
+      audio.removeEventListener("canplay", handleCanPlay);
+      audio.removeEventListener("error", handleError);
+      audio.pause();
+      // Reset audio operation flag on cleanup
+      isAudioOperationInProgress.current = false;
+    };
+  }, [playlist?.songs, currentSong?._id, showSnackbar]);
+
+  // Update volume when changed
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100;
+    }
+  }, [volume]);
+
+  // Helper function to add a song with proper duplicate checking
+  const addSongToPlaylist = useCallback((newSong, source = "unknown") => {
+    const songIdentifier = `${newSong._id || newSong.id}-${newSong.title}-${newSong.artist}`;
+    
+    // Check if we recently processed this song (within last 2 seconds)
+    if (recentlyAddedSongs.current.has(songIdentifier)) {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug(`Song recently processed from ${source}, skipping duplicate`);
+      }
+      return false;
+    }
+
+    // Track this song as recently processed
+    recentlyAddedSongs.current.add(songIdentifier);
+    setTimeout(() => {
+      recentlyAddedSongs.current.delete(songIdentifier);
+    }, 2000); // Clear after 2 seconds
+
     setPlaylist((prev) => {
       if (!prev) {
-        // If playlist is not loaded yet, just return the current state
         console.warn("Playlist not loaded yet, cannot add song");
         return prev;
       }
-      
-      // Check if song already exists in the playlist to prevent duplicates
-      const songExists = prev.songs.some(existingSong => {
+
+      // Check if song already exists in the playlist
+      const songExists = prev.songs.some((existingSong) => {
         const existingId = existingSong._id || existingSong.id;
         const newId = newSong._id || newSong.id;
-        return existingId === newId || 
-          (existingSong.title === newSong.title && existingSong.artist === newSong.artist);
+        return (
+          existingId === newId ||
+          (existingSong.title === newSong.title &&
+            existingSong.artist === newSong.artist)
+        );
       });
-      
+
       if (songExists) {
-        console.warn("Song already exists in playlist, skipping duplicate addition");
+        if (process.env.NODE_ENV === 'development') {
+          console.debug(`Song already exists in playlist (${source})`);
+        }
         return prev;
       }
-      
+
+      console.log(`✅ Added song from ${source}:`, newSong.title, "by", newSong.artist);
       return {
         ...prev,
         songs: [...(prev.songs || []), newSong],
       };
     });
-  };
+    
+    return true;
+  }, []);
+
+  const handleSongAdded = useCallback((newSong) => {
+    addSongToPlaylist(newSong, "MusicSearch");
+  }, [addSongToPlaylist]);
 
   const handleOpenMusicSearch = () => {
     setMusicSearchOpen(true);
@@ -358,10 +530,6 @@ function PlaylistPage() {
   };
 
   // CRUD Handler Functions
-  const showSnackbar = (message, severity = "success") => {
-    setSnackbar({ open: true, message, severity });
-  };
-
   const handleEditPlaylist = () => {
     setEditingPlaylist({
       name: playlist.name,
@@ -402,11 +570,32 @@ function PlaylistPage() {
       if (!songId) {
         console.error("No valid song ID provided for deletion");
         console.log("Selected song:", selectedSong);
+        console.log(
+          "Available song properties:",
+          selectedSong
+            ? Object.keys(selectedSong)
+            : "selectedSong is null/undefined"
+        );
         showSnackbar("Failed to remove song: Invalid song ID", "error");
         return;
       }
 
+      // Check if user has permission to delete songs
+      if (
+        !userPermissions?.permissions?.canRemoveSongs &&
+        !userPermissions?.permissions?.canEdit
+      ) {
+        console.error("User does not have permission to remove songs");
+        showSnackbar(
+          "You don't have permission to remove songs from this playlist",
+          "error"
+        );
+        return;
+      }
+
       console.log("Attempting to delete song with ID:", songId);
+      console.log("Selected song object:", selectedSong);
+
       await songAPI.remove(songId, id);
       setPlaylist((prev) => ({
         ...prev,
@@ -424,6 +613,117 @@ function PlaylistPage() {
     }
   };
 
+  // Collaborator Management Functions
+  const handleManageCollaborators = () => {
+    setCollaboratorManageOpen(true);
+  };
+
+  const handleAddCollaborator = async () => {
+    setCollaboratorErrors({});
+
+    // Validation
+    const errors = {};
+    if (!newCollaborator.email && !newCollaborator.username) {
+      errors.identifier = "Either email or username is required";
+    }
+    if (!newCollaborator.role) {
+      errors.role = "Role is required";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setCollaboratorErrors(errors);
+      return;
+    }
+
+    setCollaboratorLoading(true);
+    try {
+      const collaboratorData = {
+        email: newCollaborator.email || undefined,
+        username: newCollaborator.username || undefined,
+        role: newCollaborator.role,
+      };
+
+      const response = await rbacAPI.addCollaborator(id, collaboratorData);
+
+      // Update playlist collaborators
+      setPlaylist((prev) => ({
+        ...prev,
+        collaborators: [
+          ...(prev.collaborators || []),
+          response.data.data.collaborator,
+        ],
+      }));
+
+      // Reset form
+      setNewCollaborator({ email: "", username: "", role: "viewer" });
+      setAddCollaboratorOpen(false);
+      showSnackbar("Collaborator added successfully!", "success");
+    } catch (error) {
+      console.error("Error adding collaborator:", error);
+      const errorMessage =
+        error.response?.data?.message || "Failed to add collaborator";
+      showSnackbar(errorMessage, "error");
+    } finally {
+      setCollaboratorLoading(false);
+    }
+  };
+
+  const handleUpdateCollaboratorRole = async (userId, newRole) => {
+    setCollaboratorLoading(true);
+    try {
+      await rbacAPI.updateCollaboratorRole(id, userId, { role: newRole });
+
+      // Update playlist collaborators
+      setPlaylist((prev) => ({
+        ...prev,
+        collaborators: prev.collaborators.map((collab) =>
+          collab.user._id === userId ? { ...collab, role: newRole } : collab
+        ),
+      }));
+
+      showSnackbar("Collaborator role updated successfully!", "success");
+    } catch (error) {
+      console.error("Error updating collaborator role:", error);
+      const errorMessage =
+        error.response?.data?.message || "Failed to update collaborator role";
+      showSnackbar(errorMessage, "error");
+    } finally {
+      setCollaboratorLoading(false);
+    }
+  };
+
+  const handleRemoveCollaborator = async (userId, username) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to remove ${username} from this playlist?`
+      )
+    ) {
+      return;
+    }
+
+    setCollaboratorLoading(true);
+    try {
+      await rbacAPI.removeCollaborator(id, userId);
+
+      // Update playlist collaborators
+      setPlaylist((prev) => ({
+        ...prev,
+        collaborators: prev.collaborators.filter(
+          (collab) => collab.user._id !== userId
+        ),
+      }));
+
+      showSnackbar("Collaborator removed successfully!", "success");
+    } catch (error) {
+      console.error("Error removing collaborator:", error);
+      const errorMessage =
+        error.response?.data?.message || "Failed to remove collaborator";
+      showSnackbar(errorMessage, "error");
+    } finally {
+      setCollaboratorLoading(false);
+    }
+  };
+
   const theme = createBlockchainTheme(darkMode);
 
   useEffect(() => {
@@ -431,24 +731,28 @@ function PlaylistPage() {
       try {
         const response = await playlistAPI.getById(id);
         const playlistData = response.data.data.playlist;
-        
+
         // Ensure songs is always an array
         if (!playlistData.songs) {
           playlistData.songs = [];
         }
-        
+
         // Remove any potential duplicates from the initial data
-        const uniqueSongs = playlistData.songs.filter((song, index, self) => 
-          index === self.findIndex(s => {
-            const sId = s._id || s.id;
-            const songId = song._id || song.id;
-            return sId === songId || 
-              (s.title === song.title && s.artist === song.artist);
-          })
+        const uniqueSongs = playlistData.songs.filter(
+          (song, index, self) =>
+            index ===
+            self.findIndex((s) => {
+              const sId = s._id || s.id;
+              const songId = song._id || song.id;
+              return (
+                sId === songId ||
+                (s.title === song.title && s.artist === song.artist)
+              );
+            })
         );
-        
+
         playlistData.songs = uniqueSongs;
-        
+
         setPlaylist(playlistData);
         setUserPermissions(playlistData.userAccess);
 
@@ -469,27 +773,7 @@ function PlaylistPage() {
         });
 
         socketService.onSongAdded((data) => {
-          setPlaylist((prev) => {
-            if (!prev) return prev;
-            
-            // Check if song already exists to prevent duplicates from WebSocket events
-            const songExists = prev.songs.some(existingSong => {
-              const existingId = existingSong._id || existingSong.id;
-              const newId = data.song._id || data.song.id;
-              return existingId === newId || 
-                (existingSong.title === data.song.title && existingSong.artist === data.song.artist);
-            });
-            
-            if (songExists) {
-              console.warn("Song already exists in playlist, skipping WebSocket duplicate");
-              return prev;
-            }
-            
-            return {
-              ...prev,
-              songs: [...(prev.songs || []), data.song],
-            };
-          });
+          addSongToPlaylist(data.song, "WebSocket");
         });
 
         socketService.onCollaboratorAdded((data) => {
@@ -514,7 +798,7 @@ function PlaylistPage() {
       socketService.leavePlaylist(id);
       socketService.removeAllListeners();
     };
-  }, [id]);
+  }, [id, addSongToPlaylist]);
 
   const getRoleBadgeColor = (role) => {
     const colors = {
@@ -527,13 +811,178 @@ function PlaylistPage() {
     return colors[role] || "default";
   };
 
-  const handleSongPlay = (song) => {
-    setCurrentSong(song);
-    setIsPlaying(true);
+  const handleSongPlay = async (song) => {
+    if (!audioRef.current) return;
+
+    // Prevent concurrent audio operations
+    if (isAudioOperationInProgress.current) {
+      console.debug("Audio operation already in progress, ignoring request");
+      return;
+    }
+
+    // If clicking the same song that's already playing, just toggle play/pause
+    const currentSongId = currentSong?._id || currentSong?.id;
+    const newSongId = song._id || song.id;
+    if (currentSong && currentSongId === newSongId && isPlaying) {
+      handlePlayPause();
+      return;
+    }
+
+    isAudioOperationInProgress.current = true;
+
+    try {
+      // Stop current audio and wait for it to fully stop
+      if (audioRef.current && !audioRef.current.paused) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+        // Wait a small amount to ensure the pause operation completes
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      setCurrentSong(song);
+      setIsLoading(true);
+
+      // Try to find a preview URL for the song
+      let audioUrl = null;
+
+      // Check if song has metadata with preview URL
+      if (song.metadata?.previewUrl) {
+        audioUrl = song.metadata.previewUrl;
+      }
+      // For Spotify songs, we might have a preview URL
+      else if (song.spotifyId) {
+        // In a real app, you'd fetch preview URL from Spotify API
+        // For demo purposes, use a placeholder audio file
+        showSnackbar(
+          `Playing preview for "${song.title}" by ${song.artist}`,
+          "info"
+        );
+        // Use a copyright-free demo audio file
+        audioUrl =
+          "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3";
+      }
+      // For other sources, try to use a demo audio
+      else {
+        showSnackbar(
+          `Playing demo audio for "${song.title}" by ${song.artist}`,
+          "info"
+        );
+        // Use a shorter demo audio file
+        audioUrl =
+          "https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg";
+      }
+
+      if (!audioUrl) {
+        showSnackbar("Audio preview not available for this song.", "warning");
+        return;
+      }
+
+      // Reset audio element before loading new source
+      audioRef.current.currentTime = 0;
+      audioRef.current.src = audioUrl;
+
+      // Wait for the audio to be ready before playing
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          audioRef.current.removeEventListener("canplay", onCanPlay);
+          audioRef.current.removeEventListener("error", onError);
+          reject(new Error("Audio loading timeout"));
+        }, 10000); // 10 second timeout
+
+        const onCanPlay = () => {
+          clearTimeout(timeout);
+          audioRef.current.removeEventListener("canplay", onCanPlay);
+          audioRef.current.removeEventListener("error", onError);
+          resolve();
+        };
+
+        const onError = (error) => {
+          clearTimeout(timeout);
+          audioRef.current.removeEventListener("canplay", onCanPlay);
+          audioRef.current.removeEventListener("error", onError);
+          reject(error);
+        };
+
+        audioRef.current.addEventListener("canplay", onCanPlay);
+        audioRef.current.addEventListener("error", onError);
+
+        // Trigger loading
+        audioRef.current.load();
+      });
+
+      // Ensure we're not trying to play while paused
+      if (audioRef.current.paused) {
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+        }
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error("Error playing audio:", error);
+      // Filter out common errors that don't need user notification
+      if (error.name !== "AbortError" && error.name !== "NotAllowedError") {
+        showSnackbar(
+          "Failed to play audio. Preview may not be available.",
+          "error"
+        );
+      }
+      setIsPlaying(false);
+    } finally {
+      setIsLoading(false);
+      isAudioOperationInProgress.current = false;
+    }
   };
 
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
+  const handlePlayPause = async () => {
+    if (!audioRef.current || !currentSong) return;
+
+    // Prevent concurrent audio operations
+    if (isAudioOperationInProgress.current) {
+      console.debug("Audio operation already in progress, ignoring play/pause request");
+      return;
+    }
+
+    isAudioOperationInProgress.current = true;
+
+    try {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        // Ensure the audio element is ready to play
+        if (audioRef.current.paused) {
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            await playPromise;
+          }
+          setIsPlaying(true);
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling playback:", error);
+      // Only show user-facing errors for non-abort errors
+      if (error.name !== "AbortError" && error.name !== "NotAllowedError") {
+        showSnackbar("Error controlling playback", "error");
+      }
+      setIsPlaying(false);
+    } finally {
+      isAudioOperationInProgress.current = false;
+    }
+  };
+
+  const handleSeek = (newTime) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const handleVolumeChange = (newVolume) => {
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume / 100;
+    }
   };
 
   if (loading) {
@@ -628,7 +1077,8 @@ function PlaylistPage() {
             />
 
             {/* Playlist Actions Menu */}
-            {(userPermissions?.permissions?.canEdit || userPermissions?.role === "owner") && (
+            {(userPermissions?.permissions?.canEdit ||
+              userPermissions?.role === "owner") && (
               <IconButton
                 color="inherit"
                 onClick={(e) => setMenuAnchor(e.currentTarget)}
@@ -759,7 +1209,11 @@ function PlaylistPage() {
                   ) : (
                     <List>
                       {playlist.songs?.map((song, index) => (
-                        <Fade in={true} timeout={300 + index * 100} key={song._id || song.id || `song-${index}`}>
+                        <Fade
+                          in={true}
+                          timeout={300 + index * 100}
+                          key={song._id || song.id || `song-${index}`}
+                        >
                           <ListItem
                             divider
                             sx={{
@@ -803,12 +1257,17 @@ function PlaylistPage() {
                               >
                                 <PlayArrow />
                               </IconButton>
-                              {userPermissions?.permissions?.canEdit && (
+                              {(userPermissions?.permissions?.canEdit ||
+                                userPermissions?.permissions
+                                  ?.canRemoveSongs) && (
                                 <IconButton
                                   color="error"
                                   onClick={(e) => {
                                     console.log("Setting selected song:", song);
-                                    console.log("Song ID:", song._id || song.id);
+                                    console.log(
+                                      "Song ID:",
+                                      song._id || song.id
+                                    );
                                     setSelectedSong(song);
                                     setSongMenuAnchor(e.currentTarget);
                                   }}
@@ -889,7 +1348,13 @@ function PlaylistPage() {
                   </List>
 
                   {userPermissions?.permissions?.canManageCollaborators && (
-                    <Button variant="outlined" fullWidth sx={{ mt: 2 }}>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      sx={{ mt: 2 }}
+                      onClick={handleManageCollaborators}
+                      startIcon={<PersonAddIcon />}
+                    >
                       Manage Validators
                     </Button>
                   )}
@@ -951,6 +1416,12 @@ function PlaylistPage() {
             isPlaying={isPlaying}
             onPlayPause={handlePlayPause}
             darkMode={darkMode}
+            currentTime={currentTime}
+            duration={duration}
+            volume={volume}
+            onVolumeChange={handleVolumeChange}
+            onSeek={handleSeek}
+            isLoading={isLoading}
           />
         )}
 
@@ -974,7 +1445,7 @@ function PlaylistPage() {
             Edit Playlist
           </MenuItem>
           {userPermissions?.role === "owner" && (
-            <MenuItem 
+            <MenuItem
               onClick={() => {
                 setDeletePlaylistOpen(true);
                 setMenuAnchor(null);
@@ -993,31 +1464,52 @@ function PlaylistPage() {
           open={Boolean(songMenuAnchor)}
           onClose={() => setSongMenuAnchor(null)}
         >
-          <MenuItem 
-            onClick={() => handleDeleteSong(selectedSong?._id || selectedSong?.id)}
-            sx={{ color: "error.main" }}
-          >
-            <DeleteIcon sx={{ mr: 1 }} />
-            Remove from Playlist
-          </MenuItem>
+          {selectedSong &&
+            (userPermissions?.permissions?.canRemoveSongs ||
+              userPermissions?.permissions?.canEdit) && (
+              <MenuItem
+                onClick={() =>
+                  handleDeleteSong(selectedSong?._id || selectedSong?.id)
+                }
+                sx={{ color: "error.main" }}
+              >
+                <DeleteIcon sx={{ mr: 1 }} />
+                Remove from Playlist
+              </MenuItem>
+            )}
         </Menu>
 
         {/* Edit Playlist Dialog */}
-        <Dialog open={editPlaylistOpen} onClose={() => setEditPlaylistOpen(false)} maxWidth="sm" fullWidth>
+        <Dialog
+          open={editPlaylistOpen}
+          onClose={() => setEditPlaylistOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
           <DialogTitle>Edit Playlist</DialogTitle>
           <DialogContent>
             <TextField
               fullWidth
               label="Playlist Name"
               value={editingPlaylist.name || ""}
-              onChange={(e) => setEditingPlaylist(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) =>
+                setEditingPlaylist((prev) => ({
+                  ...prev,
+                  name: e.target.value,
+                }))
+              }
               margin="normal"
             />
             <TextField
               fullWidth
               label="Description"
               value={editingPlaylist.description || ""}
-              onChange={(e) => setEditingPlaylist(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) =>
+                setEditingPlaylist((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
               margin="normal"
               multiline
               rows={3}
@@ -1026,7 +1518,12 @@ function PlaylistPage() {
               control={
                 <Checkbox
                   checked={editingPlaylist.isPublic || false}
-                  onChange={(e) => setEditingPlaylist(prev => ({ ...prev, isPublic: e.target.checked }))}
+                  onChange={(e) =>
+                    setEditingPlaylist((prev) => ({
+                      ...prev,
+                      isPublic: e.target.checked,
+                    }))
+                  }
                 />
               }
               label="Make playlist public"
@@ -1046,11 +1543,15 @@ function PlaylistPage() {
         </Dialog>
 
         {/* Delete Playlist Confirmation Dialog */}
-        <Dialog open={deletePlaylistOpen} onClose={() => setDeletePlaylistOpen(false)}>
+        <Dialog
+          open={deletePlaylistOpen}
+          onClose={() => setDeletePlaylistOpen(false)}
+        >
           <DialogTitle>Delete Playlist</DialogTitle>
           <DialogContent>
             <Alert severity="warning" sx={{ mb: 2 }}>
-              This action cannot be undone. All songs and collaborators will be removed.
+              This action cannot be undone. All songs and collaborators will be
+              removed.
             </Alert>
             <Typography>
               Are you sure you want to delete "{playlist?.name}"?
@@ -1058,8 +1559,290 @@ function PlaylistPage() {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDeletePlaylistOpen(false)}>Cancel</Button>
-            <Button onClick={handleDeletePlaylist} variant="contained" color="error">
+            <Button
+              onClick={handleDeletePlaylist}
+              variant="contained"
+              color="error"
+            >
               Delete Playlist
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Collaborator Management Dialog */}
+        <Dialog
+          open={collaboratorManageOpen}
+          onClose={() => setCollaboratorManageOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <People color="primary" />
+              Manage Chain Validators
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ mb: 3 }}>
+              <Button
+                variant="contained"
+                startIcon={<PersonAddIcon />}
+                onClick={() => setAddCollaboratorOpen(true)}
+                sx={{ mb: 2 }}
+              >
+                Add New Validator
+              </Button>
+            </Box>
+
+            {/* Current Collaborators List */}
+            <Typography variant="h6" gutterBottom>
+              Current Validators
+            </Typography>
+            <List>
+              {/* Owner */}
+              <ListItem
+                sx={{ bgcolor: "rgba(255, 0, 0, 0.1)", borderRadius: 1, mb: 1 }}
+              >
+                <ListItemIcon>
+                  <Avatar sx={{ bgcolor: "error.main" }}>
+                    {playlist?.creator?.username?.charAt(0).toUpperCase()}
+                  </Avatar>
+                </ListItemIcon>
+                <ListItemText
+                  primary={
+                    <Typography fontWeight="bold">
+                      {playlist?.creator?.username}
+                    </Typography>
+                  }
+                  secondary="Genesis Block Creator"
+                />
+                <Chip label="owner" color="error" size="small" />
+              </ListItem>
+
+              {/* Collaborators */}
+              {playlist?.collaborators?.map((collaborator, index) => (
+                <ListItem
+                  key={index}
+                  sx={{
+                    borderRadius: 1,
+                    mb: 1,
+                    border: "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  <ListItemIcon>
+                    <Avatar>
+                      {collaborator.user?.username?.charAt(0).toUpperCase()}
+                    </Avatar>
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={collaborator.user?.username || "Unknown User"}
+                    secondary={collaborator.user?.email || "No email"}
+                  />
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                      <InputLabel>Role</InputLabel>
+                      <Select
+                        value={collaborator.role}
+                        label="Role"
+                        onChange={(e) =>
+                          handleUpdateCollaboratorRole(
+                            collaborator.user._id,
+                            e.target.value
+                          )
+                        }
+                        disabled={collaboratorLoading}
+                      >
+                        <MenuItem value="viewer">Viewer</MenuItem>
+                        <MenuItem value="contributor">Contributor</MenuItem>
+                        <MenuItem value="editor">Editor</MenuItem>
+                        <MenuItem value="admin">Admin</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <IconButton
+                      color="error"
+                      onClick={() =>
+                        handleRemoveCollaborator(
+                          collaborator.user._id,
+                          collaborator.user?.username
+                        )
+                      }
+                      disabled={collaboratorLoading}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </ListItem>
+              ))}
+            </List>
+
+            {collaboratorLoading && (
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCollaboratorManageOpen(false)}>
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Add Collaborator Dialog */}
+        <Dialog
+          open={addCollaboratorOpen}
+          onClose={() => setAddCollaboratorOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <PersonAddIcon color="primary" />
+              Add New Validator
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Alert severity="info" sx={{ mb: 3 }}>
+              Add a new validator to this blockchain playlist. They will receive
+              permissions based on their assigned role.
+            </Alert>
+
+            <TextField
+              fullWidth
+              label="Email Address"
+              type="email"
+              value={newCollaborator.email}
+              onChange={(e) =>
+                setNewCollaborator((prev) => ({
+                  ...prev,
+                  email: e.target.value,
+                }))
+              }
+              margin="normal"
+              error={!!collaboratorErrors.identifier}
+              helperText={collaboratorErrors.identifier}
+              InputProps={{
+                startAdornment: (
+                  <EmailIcon sx={{ mr: 1, color: "text.secondary" }} />
+                ),
+              }}
+            />
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ my: 1, textAlign: "center" }}
+            >
+              OR
+            </Typography>
+
+            <TextField
+              fullWidth
+              label="Username"
+              value={newCollaborator.username}
+              onChange={(e) =>
+                setNewCollaborator((prev) => ({
+                  ...prev,
+                  username: e.target.value,
+                }))
+              }
+              margin="normal"
+              error={!!collaboratorErrors.identifier}
+              InputProps={{
+                startAdornment: (
+                  <AccountCircleIcon sx={{ mr: 1, color: "text.secondary" }} />
+                ),
+              }}
+            />
+
+            <FormControl
+              fullWidth
+              margin="normal"
+              error={!!collaboratorErrors.role}
+            >
+              <InputLabel>Role</InputLabel>
+              <Select
+                value={newCollaborator.role}
+                label="Role"
+                onChange={(e) =>
+                  setNewCollaborator((prev) => ({
+                    ...prev,
+                    role: e.target.value,
+                  }))
+                }
+              >
+                <MenuItem value="viewer">
+                  <Box>
+                    <Typography variant="body2" fontWeight="bold">
+                      Viewer
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Can view playlist and songs
+                    </Typography>
+                  </Box>
+                </MenuItem>
+                <MenuItem value="contributor">
+                  <Box>
+                    <Typography variant="body2" fontWeight="bold">
+                      Contributor
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Can add songs and vote
+                    </Typography>
+                  </Box>
+                </MenuItem>
+                <MenuItem value="editor">
+                  <Box>
+                    <Typography variant="body2" fontWeight="bold">
+                      Editor
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Can edit songs and manage content
+                    </Typography>
+                  </Box>
+                </MenuItem>
+                <MenuItem value="admin">
+                  <Box>
+                    <Typography variant="body2" fontWeight="bold">
+                      Admin
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Full permissions except ownership
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              </Select>
+              {collaboratorErrors.role && (
+                <Typography variant="caption" color="error">
+                  {collaboratorErrors.role}
+                </Typography>
+              )}
+            </FormControl>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setAddCollaboratorOpen(false);
+                setNewCollaborator({ email: "", username: "", role: "viewer" });
+                setCollaboratorErrors({});
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddCollaborator}
+              variant="contained"
+              disabled={collaboratorLoading}
+              startIcon={
+                collaboratorLoading ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  <PersonAddIcon />
+                )
+              }
+            >
+              Add Validator
             </Button>
           </DialogActions>
         </Dialog>
@@ -1068,9 +1851,12 @@ function PlaylistPage() {
         <Snackbar
           open={snackbar.open}
           autoHideDuration={6000}
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
         >
-          <Alert severity={snackbar.severity} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
+          <Alert
+            severity={snackbar.severity}
+            onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          >
             {snackbar.message}
           </Alert>
         </Snackbar>
