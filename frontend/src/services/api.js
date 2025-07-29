@@ -59,22 +59,27 @@ export const playlistAPI = {
   update: (id, playlistData) => api.put(`/playlists/${id}`, playlistData),
   delete: (id) => api.delete(`/playlists/${id}`),
   search: (query) => api.get(`/playlists/search?q=${query}`),
-  addCollaborator: (id, collaboratorData) => api.post(`/playlists/${id}/collaborators`, collaboratorData),
-  removeCollaborator: (id, userId) => api.delete(`/playlists/${id}/collaborators/${userId}`),
+  addCollaborator: (id, collaboratorData) =>
+    api.post(`/playlists/${id}/collaborators`, collaboratorData),
+  removeCollaborator: (id, userId) =>
+    api.delete(`/playlists/${id}/collaborators/${userId}`),
 };
 
 // Song API calls
 export const songAPI = {
   getByPlaylist: (playlistId) => api.get(`/songs?playlistId=${playlistId}`),
   add: (songData) => api.post("/songs", songData),
-  remove: (songId, playlistId) => api.delete(`/songs/${songId}?playlistId=${playlistId}`),
-  search: (playlistId, query) => api.get(`/songs/search?playlistId=${playlistId}&q=${query}`),
+  remove: (songId, playlistId) =>
+    api.delete(`/songs/${songId}?playlistId=${playlistId}`),
+  search: (playlistId, query) =>
+    api.get(`/songs/search?playlistId=${playlistId}&q=${query}`),
   reorder: (reorderData) => api.put("/songs/reorder", reorderData),
 };
 
 // Music Search API calls
 export const searchAPI = {
-  tracks: (query, service = "spotify") => api.get(`/search/tracks?q=${encodeURIComponent(query)}&service=${service}`),
+  tracks: (query, service = "spotify") =>
+    api.get(`/search/tracks?q=${encodeURIComponent(query)}&service=${service}`),
   artist: (name) => api.get(`/search/artist?name=${encodeURIComponent(name)}`),
   getTrackById: (service, id) => api.get(`/search/track/${service}/${id}`),
   spotifyAuth: () => api.get("/search/spotify/auth"),
@@ -88,12 +93,19 @@ export const lyricsAPI = {
   search: (query) => api.get(`/lyrics/search?q=${encodeURIComponent(query)}`),
   getSong: (songId) => api.get(`/lyrics/song/${songId}`),
   getArtist: (artistId) => api.get(`/lyrics/artist/${artistId}`),
-  findLyrics: (title, artist) => api.get(`/lyrics/find?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`),
+  getArtistSongs: (artistId, page = 1, limit = 10) =>
+    api.get(`/lyrics/artist/${artistId}/songs?page=${page}&limit=${limit}`),
+  findLyrics: (title, artist) =>
+    api.get(
+      `/lyrics/find?title=${encodeURIComponent(
+        title
+      )}&artist=${encodeURIComponent(artist)}`
+    ),
   getTrending: () => api.get("/lyrics/trending"),
   enrich: (songId) => api.post(`/lyrics/enrich/${songId}`),
 };
 
-// RBAC API calls  
+// RBAC API calls
 export const rbacAPI = {
   addCollaborator: (playlistId, collaboratorData) =>
     api.post(`/rbac/collaborators/${playlistId}`, collaboratorData),
@@ -103,12 +115,9 @@ export const rbacAPI = {
     api.delete(`/rbac/collaborators/${playlistId}/${userId}`),
   getCollaborators: (playlistId) =>
     api.get(`/rbac/collaborators/${playlistId}`),
-  getPermissions: (playlistId) =>
-    api.get(`/rbac/permissions/${playlistId}`),
-  getRoles: () =>
-    api.get(`/rbac/roles`),
-  leavePlaylist: (playlistId) =>
-    api.post(`/rbac/leave/${playlistId}`),
+  getPermissions: (playlistId) => api.get(`/rbac/permissions/${playlistId}`),
+  getRoles: () => api.get(`/rbac/roles`),
+  leavePlaylist: (playlistId) => api.post(`/rbac/leave/${playlistId}`),
   transferOwnership: (playlistId, newOwnerId) =>
     api.post(`/rbac/transfer-ownership/${playlistId}`, { newOwnerId }),
 };
@@ -117,8 +126,7 @@ export const rbacAPI = {
 export const suggestionsAPI = {
   create: (playlistId, suggestionData) =>
     api.post(`/suggestions/${playlistId}`, suggestionData),
-  getAll: (playlistId) =>
-    api.get(`/suggestions/${playlistId}`),
+  getAll: (playlistId) => api.get(`/suggestions/${playlistId}`),
   approve: (playlistId, suggestionId) =>
     api.post(`/suggestions/${playlistId}/${suggestionId}/approve`),
   reject: (playlistId, suggestionId) =>
@@ -137,7 +145,7 @@ export const cacheAPI = {
   getHealth: () => api.get("/cache/health"),
 };
 
-// Health API calls  
+// Health API calls
 export const healthAPI = {
   getHealth: () => api.get("/health/health"),
   getInfo: () => api.get("/health/info"),
@@ -147,11 +155,14 @@ export const healthAPI = {
 export const realtimeAPI = {
   getSession: (playlistId) => api.get(`/realtime/session/${playlistId}`),
   vote: (voteData) => api.post("/realtime/vote", voteData),
-  updateNowPlaying: (playlistId, songData) => api.post("/realtime/now-playing", { playlistId, ...songData }),
-  sendNotification: (notificationData) => api.post("/realtime/notification", notificationData),
+  updateNowPlaying: (playlistId, songData) =>
+    api.post("/realtime/now-playing", { playlistId, ...songData }),
+  sendNotification: (notificationData) =>
+    api.post("/realtime/notification", notificationData),
   getVotes: (songId) => api.get(`/realtime/votes/${songId}`),
   getActivity: (playlistId) => api.get(`/realtime/activity/${playlistId}`),
-  updatePresence: (presenceData) => api.post("/realtime/presence", presenceData),
+  updatePresence: (presenceData) =>
+    api.post("/realtime/presence", presenceData),
   getStats: () => api.get("/realtime/stats"),
 };
 

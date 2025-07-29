@@ -15,15 +15,23 @@ function extractAPIEndpoints() {
     const filePath = path.join(routesDir, file);
     const content = fs.readFileSync(filePath, 'utf8');
     
-    // Extract route definitions
+    // Extract route definitions with better pattern matching
     const routePattern = /router\.(get|post|put|delete|patch)\s*\(\s*["']([^"']+)["']/g;
     const endpoints = [];
     
     let match;
     while ((match = routePattern.exec(content)) !== null) {
       const method = match[1].toUpperCase();
-      const path = match[2];
-      endpoints.push(`${method} /api/${routeName}${path === '/' ? '' : path}`);
+      let path = match[2];
+      
+      // Handle root path
+      if (path === '/') {
+        path = '';
+      }
+      
+      // Construct full API path
+      const fullPath = `/api/${routeName}${path}`;
+      endpoints.push(`${method} ${fullPath}`);
     }
     
     allEndpoints[routeName] = endpoints;
@@ -119,27 +127,95 @@ function compareAPIs() {
   // Flatten frontend endpoints
   const allFrontendEndpoints = Object.values(frontendAPIs).flat().map(api => api.endpoint);
   
-  console.log("✅ USED ENDPOINTS (Frontend calls these):");
-  allFrontendEndpoints.forEach(endpoint => {
-    const isImplemented = allBackendEndpoints.includes(endpoint);
-    const status = isImplemented ? "✅" : "❌ MISSING";
-    console.log(`   ${status} ${endpoint}`);
-  });
+  // Normalize endpoints for better matching
+  function normalizeEndpoint(endpoint) {
+    return endpoint
+      // Normalize path parameters
+      .replace(/:[\w]+/g, ':param')
+      // Remove query parameters for base route matching
+      .replace(/\?.*$/, '')
+      // Normalize parameter patterns
+      .replace(/:param\?.*$/, ':param');
+  }
   
-  console.log("\n⚠️  UNUSED ENDPOINTS (Backend has these, Frontend doesn't use):");
-  allBackendEndpoints.forEach(endpoint => {
-    const isUsed = allFrontendEndpoints.includes(endpoint);
-    if (!isUsed) {
-      console.log(`   🔹 ${endpoint}`);
+  // Create normalized lookup sets
+  const normalizedBackend = new Set(allBackendEndpoints.map(normalizeEndpoint));
+  const normalizedFrontend = new Set(allFrontendEndpoints.map(normalizeEndpoint));
+  
+  console.log("✅ CONNECTED ENDPOINTS (Frontend matches Backend):");
+  let connectedCount = 0;
+  allFrontendEndpoints.forEach(frontendEndpoint => {
+    const normalized = normalizeEndpoint(frontendEndpoint);
+    const isConnected = normalizedBackend.has(normalized);
+    
+    if (isConnected) {
+      connectedCount++;
+      console.log(`   ✅ ${frontendEndpoint}`);
     }
   });
   
-  console.log(`\n📊 SUMMARY:`);
-  console.log(`   Backend Endpoints: ${allBackendEndpoints.length}`);
-  console.log(`   Frontend API Calls: ${allFrontendEndpoints.length}`);
-  console.log(`   Used Endpoints: ${allFrontendEndpoints.filter(ep => allBackendEndpoints.includes(ep)).length}`);
-  console.log(`   Missing Endpoints: ${allFrontendEndpoints.filter(ep => !allBackendEndpoints.includes(ep)).length}`);
-  console.log(`   Unused Endpoints: ${allBackendEndpoints.filter(ep => !allFrontendEndpoints.includes(ep)).length}`);
+  console.log("\n❌ DISCONNECTED ENDPOINTS (Frontend calls these, but no Backend match):");
+  let disconnectedCount = 0;
+  allFrontendEndpoints.forEach(frontendEndpoint => {
+    const normalized = normalizeEndpoint(frontendEndpoint);
+    const isConnected = normalizedBackend.has(normalized);
+    
+    if (!isConnected) {
+      disconnectedCount++;
+      console.log(`   ❌ ${frontendEndpoint}`);
+      
+      // Try to find close matches
+      const possibleMatches = allBackendEndpoints.filter(backendEndpoint => {
+        const backendNorm = normalizeEndpoint(backendEndpoint);
+        const frontendNorm = normalized;
+        
+        // Check if paths are similar (ignoring method differences)
+        const backendPath = backendNorm.split(' ')[1];
+        const frontendPath = frontendNorm.split(' ')[1];
+        
+        return backendPath === frontendPath;
+      });
+      
+      if (possibleMatches.length > 0) {
+        console.log(`      💡 Possible matches: ${possibleMatches.join(', ')}`);
+      }
+    }
+  });
+  
+  console.log("\n🔹 UNUSED ENDPOINTS (Backend has these, Frontend doesn't call):");
+  let unusedCount = 0;
+  allBackendEndpoints.forEach(backendEndpoint => {
+    const normalized = normalizeEndpoint(backendEndpoint);
+    const isUsed = normalizedFrontend.has(normalized);
+    
+    if (!isUsed) {
+      unusedCount++;
+      console.log(`   🔹 ${backendEndpoint}`);
+    }
+  });
+  
+  // Calculate connection percentage
+  const connectionRate = Math.round((connectedCount / allFrontendEndpoints.length) * 100);
+  const coverage = Math.round((allFrontendEndpoints.length / allBackendEndpoints.length) * 100);
+  
+  console.log(`\n📊 DETAILED ANALYSIS:`);
+  console.log(`   Backend Endpoints Available: ${allBackendEndpoints.length}`);
+  console.log(`   Frontend API Calls Defined: ${allFrontendEndpoints.length}`);
+  console.log(`   Successfully Connected: ${connectedCount}`);
+  console.log(`   Disconnected/Missing: ${disconnectedCount}`);
+  console.log(`   Unused Backend APIs: ${unusedCount}`);
+  console.log(`   \n🎯 CONNECTION RATE: ${connectionRate}% (${connectedCount}/${allFrontendEndpoints.length})`);
+  console.log(`   📈 API COVERAGE: ${coverage}% (${allFrontendEndpoints.length}/${allBackendEndpoints.length})`);
+  
+  if (connectionRate >= 90) {
+    console.log(`   🎉 EXCELLENT: Your APIs are well connected!`);
+  } else if (connectionRate >= 70) {
+    console.log(`   ✅ GOOD: Most APIs are connected, minor fixes needed`);
+  } else if (connectionRate >= 50) {
+    console.log(`   ⚠️  MODERATE: Significant API connection issues to resolve`);
+  } else {
+    console.log(`   ❌ POOR: Major API connectivity problems need attention`);
+  }
 }
 
 compareAPIs();

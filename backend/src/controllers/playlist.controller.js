@@ -38,6 +38,59 @@ exports.getPlaylists = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Search playlists
+exports.searchPlaylists = asyncHandler(async (req, res, next) => {
+  const { q } = req.query;
+
+  if (!q || q.trim() === "") {
+    return next(new AppError("Search query is required", 400));
+  }
+
+  const searchQuery = q.trim();
+  const cacheKey = cacheService.keys.playlistSearch(req.userId, searchQuery);
+
+  // Try cache first
+  const cachedResults = await cacheService.get(cacheKey);
+  if (cachedResults) {
+    return res.json({
+      success: true,
+      data: { playlists: cachedResults },
+      cached: true,
+    });
+  }
+
+  // Search playlists by name or description
+  const playlists = await Playlist.find({
+    $and: [
+      {
+        $or: [
+          { creator: req.userId },
+          { "collaborators.user": req.userId },
+          { isPublic: true },
+        ],
+      },
+      {
+        $or: [
+          { name: { $regex: searchQuery, $options: "i" } },
+          { description: { $regex: searchQuery, $options: "i" } },
+        ],
+      },
+    ],
+  })
+    .populate("creator", "username")
+    .populate("collaborators.user", "username")
+    .sort({ updatedAt: -1 });
+
+  // Cache the results for 10 minutes
+  await cacheService.set(cacheKey, playlists, 600);
+
+  res.json({
+    success: true,
+    data: { playlists },
+    query: searchQuery,
+  });
+});
+
 // Create a new playlist
 exports.createPlaylist = asyncHandler(async (req, res, next) => {
   const { name, description, isPublic } = req.body;

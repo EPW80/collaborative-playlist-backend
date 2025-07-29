@@ -37,6 +37,8 @@ class CacheService {
         `playlist:${playlistId}:collaborators`,
       publicPlaylists: (page = 1, limit = 20) =>
         `public:playlists:${page}:${limit}`,
+      playlistSearch: (userId, query) =>
+        `playlist:search:${userId}:${Buffer.from(query).toString("base64")}`,
       songSearch: (playlistId, query) =>
         `search:${playlistId}:${Buffer.from(query).toString("base64")}`,
       userAuth: (userId) => `auth:${userId}`,

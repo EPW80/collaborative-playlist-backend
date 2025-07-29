@@ -4,6 +4,7 @@ const { body, param, validationResult } = require("express-validator");
 const auth = require("../middleware/auth");
 const {
   getPlaylists,
+  searchPlaylists,
   createPlaylist,
   getPlaylistById,
   updatePlaylist,
@@ -62,6 +63,36 @@ router.use(auth);
  * }
  */
 router.get("/", getPlaylists);
+
+/**
+ * @route   GET /api/playlists/search
+ * @desc    Search playlists by name or description
+ * @access  Private
+ * @param   {string} q - Search query
+ * @returns {Object} 200 - Array of matching playlist objects
+ * @returns {Object} 400 - Validation error (missing query)
+ * @returns {Object} 401 - Unauthorized
+ * @returns {Object} 500 - Server error
+ * @example
+ * // Request: GET /api/playlists/search?q=rock
+ * // Response:
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "playlists": [
+ *       {
+ *         "_id": "playlist_id",
+ *         "name": "Rock Classics",
+ *         "description": "Best rock songs",
+ *         "creator": { "_id": "user_id", "username": "username" },
+ *         "isPublic": true
+ *       }
+ *     ]
+ *   },
+ *   "query": "rock"
+ * }
+ */
+router.get("/search", searchPlaylists);
 
 /**
  * @route   POST /api/playlists
