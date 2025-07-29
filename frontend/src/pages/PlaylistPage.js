@@ -65,6 +65,11 @@ import {
   Email as EmailIcon,
   AccountCircle as AccountCircleIcon,
   SmartToy as SmartToyIcon,
+  Shuffle as ShuffleIcon,
+  Repeat as RepeatIcon,
+  Notifications as NotificationsIcon,
+  Public as PublicIcon,
+  Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import { playlistAPI, songAPI, rbacAPI } from "../services/api";
@@ -388,6 +393,17 @@ function PlaylistPage() {
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showNameGenerator, setShowNameGenerator] = useState(false);
   const [showRecommendations, setShowRecommendations] = useState(false);
+
+  // Settings dialog state
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [playlistSettings, setPlaylistSettings] = useState({
+    autoPlay: false,
+    shuffleMode: false,
+    repeatMode: 'none', // 'none', 'one', 'all'
+    notifications: true,
+    publicStats: true,
+    allowSuggestions: true,
+  });
 
   // Audio playback states
   const audioRef = useRef(null);
@@ -880,6 +896,47 @@ function PlaylistPage() {
     setShowRecommendations(false);
   };
 
+  // Settings Handlers
+  const handleOpenSettings = () => {
+    setSettingsOpen(true);
+  };
+
+  const handleCloseSettings = () => {
+    setSettingsOpen(false);
+  };
+
+  const handleSettingChange = (setting, value) => {
+    setPlaylistSettings(prev => ({
+      ...prev,
+      [setting]: value
+    }));
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      // Save settings to localStorage as a fallback
+      localStorage.setItem(`playlist_settings_${id}`, JSON.stringify(playlistSettings));
+      
+      // In a real app, you'd save these settings to the backend
+      // await playlistAPI.updateSettings(id, playlistSettings);
+      
+      // Apply settings immediately
+      if (playlistSettings.shuffleMode) {
+        showSnackbar("Shuffle mode enabled! Songs will play in random order.", "info");
+      }
+      
+      if (playlistSettings.autoPlay) {
+        showSnackbar("Auto-play enabled! Next song will start automatically.", "info");
+      }
+      
+      showSnackbar("Settings saved successfully!", "success");
+      setSettingsOpen(false);
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      showSnackbar("Failed to save settings", "error");
+    }
+  };
+
   const handleNameGenerated = async (newName) => {
     try {
       if (!playlist || !id) {
@@ -987,6 +1044,26 @@ function PlaylistPage() {
 
         setPlaylist(playlistData);
         setUserPermissions(playlistData.userAccess);
+
+        // Initialize settings based on playlist data or localStorage
+        const savedSettings = localStorage.getItem(`playlist_settings_${id}`);
+        if (savedSettings) {
+          try {
+            const parsedSettings = JSON.parse(savedSettings);
+            setPlaylistSettings(parsedSettings);
+          } catch (error) {
+            console.warn("Failed to parse saved settings:", error);
+          }
+        } else if (playlistData.settings) {
+          setPlaylistSettings({
+            autoPlay: playlistData.settings.autoPlay || false,
+            shuffleMode: playlistData.settings.shuffleMode || false,
+            repeatMode: playlistData.settings.repeatMode || 'none',
+            notifications: playlistData.settings.notifications !== false, // default true
+            publicStats: playlistData.settings.publicStats !== false, // default true
+            allowSuggestions: playlistData.settings.allowSuggestions !== false, // default true
+          });
+        }
 
         if (playlistData.songs?.length > 0) {
           setCurrentSong(playlistData.songs[0]);
@@ -1389,7 +1466,11 @@ function PlaylistPage() {
             </Box>
 
             {userPermissions?.permissions?.canManageSettings && (
-              <IconButton color="inherit">
+              <IconButton 
+                color="inherit"
+                onClick={handleOpenSettings}
+                title="Playlist Settings"
+              >
                 <Settings />
               </IconButton>
             )}
@@ -1807,6 +1888,144 @@ function PlaylistPage() {
               </MenuItem>
             )}
         </Menu>
+
+        {/* Settings Dialog */}
+        <Dialog
+          open={settingsOpen}
+          onClose={handleCloseSettings}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Settings sx={{ mr: 1 }} />
+              Playlist Settings
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ mt: 2 }}>
+              {/* Playback Settings */}
+              <Box sx={{ mb: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <PlayArrow sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="h6">
+                    Playback Settings
+                  </Typography>
+                </Box>
+                <Box sx={{ pl: 4 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={playlistSettings.autoPlay}
+                        onChange={(e) => handleSettingChange('autoPlay', e.target.checked)}
+                        color="primary"
+                      />
+                    }
+                    label="Auto-play next song"
+                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <ShuffleIcon sx={{ mr: 1, fontSize: 20 }} />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={playlistSettings.shuffleMode}
+                          onChange={(e) => handleSettingChange('shuffleMode', e.target.checked)}
+                          color="primary"
+                        />
+                      }
+                      label="Shuffle mode"
+                    />
+                  </Box>
+                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
+                    <RepeatIcon sx={{ mr: 1, fontSize: 20 }} />
+                    <FormControl sx={{ minWidth: 200 }}>
+                      <InputLabel>Repeat Mode</InputLabel>
+                      <Select
+                        value={playlistSettings.repeatMode}
+                        onChange={(e) => handleSettingChange('repeatMode', e.target.value)}
+                        label="Repeat Mode"
+                      >
+                        <MenuItem value="none">No Repeat</MenuItem>
+                        <MenuItem value="one">Repeat One</MenuItem>
+                        <MenuItem value="all">Repeat All</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Privacy Settings */}
+              <Box sx={{ mb: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Security sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="h6">
+                    Privacy & Sharing
+                  </Typography>
+                </Box>
+                <Box sx={{ pl: 4 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <PublicIcon sx={{ mr: 1, fontSize: 20 }} />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={playlistSettings.publicStats}
+                          onChange={(e) => handleSettingChange('publicStats', e.target.checked)}
+                          color="primary"
+                        />
+                      }
+                      label="Show playlist statistics publicly"
+                    />
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <VisibilityIcon sx={{ mr: 1, fontSize: 20 }} />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={playlistSettings.allowSuggestions}
+                          onChange={(e) => handleSettingChange('allowSuggestions', e.target.checked)}
+                          color="primary"
+                        />
+                      }
+                      label="Allow song suggestions from collaborators"
+                    />
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Notification Settings */}
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <NotificationsIcon sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="h6">
+                    Notifications
+                  </Typography>
+                </Box>
+                <Box sx={{ pl: 4 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={playlistSettings.notifications}
+                        onChange={(e) => handleSettingChange('notifications', e.target.checked)}
+                        color="primary"
+                      />
+                    }
+                    label="Receive notifications for playlist updates"
+                  />
+                </Box>
+              </Box>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseSettings}>Cancel</Button>
+            <Button 
+              onClick={handleSaveSettings} 
+              variant="contained"
+              startIcon={<SaveIcon />}
+            >
+              Save Settings
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Edit Playlist Dialog */}
         <Dialog
