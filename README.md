@@ -50,11 +50,11 @@ The Collaborative Playlist Manager is a comprehensive music collaboration platfo
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **React 18** - Modern component-based UI library
-- **Material-UI v5** - Comprehensive React component library
+- **React 19** - Modern component-based UI library
+- **Material-UI v7** - Comprehensive React component library
 - **Socket.io Client** - Real-time WebSocket communication
 - **Axios** - HTTP client for API requests
-- **React Router** - Client-side routing
+- **React Router v7** - Client-side routing
 
 ### Backend
 - **Node.js & Express.js** - JavaScript runtime and web framework
@@ -108,8 +108,8 @@ collaborative-playlist-manager/
 ### Prerequisites
 
 Before you begin, ensure you have the following installed:
-- **Node.js** (v16 or higher)
-- **npm** or **yarn**
+- **Node.js** (v18 or higher)
+- **npm** (v8 or higher)
 - **Git**
 
 For development, you'll also need:
@@ -277,7 +277,7 @@ For complete API documentation, visit: `http://localhost:5000/api`
 NODE_ENV=production
 MONGODB_URI=your_mongodb_atlas_uri
 JWT_SECRET=your_production_jwt_secret
-FRONTEND_URL=https://your-frontend-domain.vercel.app
+FRONTEND_URL=https://frontend-epws-projects.vercel.app
 OPENAI_API_KEY=your_openai_api_key
 REDIS_HOST=your_redis_cloud_host
 REDIS_PORT=your_redis_cloud_port
@@ -286,8 +286,8 @@ REDIS_PASSWORD=your_redis_cloud_password
 
 **Frontend (Vercel):**
 ```env
-REACT_APP_API_URL=https://your-backend-domain.onrender.com/api
-REACT_APP_SOCKET_URL=https://your-backend-domain.onrender.com
+REACT_APP_API_URL=https://collaborative-playlist-backend.onrender.com/api
+REACT_APP_SOCKET_URL=https://collaborative-playlist-backend.onrender.com
 ```
 
 ### Deployment Steps
@@ -360,17 +360,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📊 Project Status
 
-- **Version**: 2.1.0
+- **Version**: 1.0.0
 - **Status**: Production Ready ✅
-- **Last Updated**: December 2024
+- **Last Updated**: July 2025
 - **Maintained**: Actively maintained
 
 ### 🎯 Roadmap
-- [ ] Mobile apps (React Native)
-- [ ] Advanced AI music analysis
+- [ ] Advanced analytics dashboard
+- [ ] Mobile Progressive Web App (PWA)
 - [ ] Voice commands integration
 - [ ] Real-time chat in playlists
-- [ ] Playlist analytics dashboard
+- [ ] Advanced AI music analysis
+- [ ] Multi-language support
 
 ---
 
