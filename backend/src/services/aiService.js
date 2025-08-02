@@ -159,7 +159,7 @@ Format as JSON array with objects containing: title, artist, reason, genre`;
   /**
    * Generate descriptive playlist descriptions
    * @param {Array} songs - Array of song objects
-   * @param {Object} playlistInfo - Basic playlist information
+   * @param {Object} playlistInfo - Basic playlist information (name, metadata)
    * @returns {Promise<String>} Generated description
    */
   async generatePlaylistDescription(songs, playlistInfo = {}) {
@@ -168,30 +168,16 @@ Format as JSON array with objects containing: title, artist, reason, genre`;
     }
 
     try {
-      const songSample = songs
-        .slice(0, 8)
-        .map((song) => `"${song.title}" by ${song.artist}`)
+      // Use more songs for better context (up to 15 as in your enhancement)
+      const songDetails = songs
+        .slice(0, 15)
+        .map((song) => `${song.title} by ${song.artist}`)
         .join(", ");
 
-      const genres = [
-        ...new Set(songs.map((s) => s.metadata?.genre).filter(Boolean)),
-      ].slice(0, 3);
-
-      const prompt = `Create an engaging playlist description for "${
+      const prompt = `Generate a compelling 2-3 sentence description for a playlist containing: ${songDetails}. 
+The playlist is named "${
         playlistInfo.name || "this playlist"
-      }" containing ${songs.length} songs.
-
-Featured songs include: ${songSample}
-
-Primary genres: ${genres.length > 0 ? genres.join(", ") : "Mixed"}
-
-Write a 2-3 sentence description that:
-- Captures the mood and vibe
-- Mentions key artists or themes
-- Suggests when/where to listen
-- Sounds natural and engaging
-
-Keep it under 200 characters for social sharing.`;
+      }". Make it engaging and highlight the mood/vibe.`;
 
       const response = await this.openai.chat.completions.create({
         model: "gpt-3.5-turbo",
@@ -206,7 +192,7 @@ Keep it under 200 characters for social sharing.`;
             content: prompt,
           },
         ],
-        max_tokens: 150,
+        max_tokens: 100, // Reduced for more concise output as in your enhancement
         temperature: 0.7,
       });
 
