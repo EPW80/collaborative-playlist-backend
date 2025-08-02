@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const cacheService = require("./cacheService");
+const RoomManager = require("./roomManager");
 
 /**
  * @fileoverview Real-time collaboration service for enhanced Socket.io features
@@ -12,14 +13,21 @@ class RealtimeService {
     this.playlistSessions = new Map(); // playlistId -> Set of userIds
     this.nowPlayingStates = new Map(); // playlistId -> { songId, userId, timestamp, position }
     this.activeVotes = new Map(); // songId -> { upvotes: Set, downvotes: Set }
+    this.roomManager = null; // Will be initialized with Redis clients
   }
 
   /**
    * Initialize real-time service with Socket.io server
    * @param {Object} io - Socket.io server instance
+   * @param {Object} redisClients - Redis pub/sub clients for scaling
    */
-  initialize(io) {
+  initialize(io, redisClients = null) {
     this.io = io;
+    
+    // Initialize room manager with Redis support
+    this.roomManager = new RoomManager(io, redisClients);
+    
+    console.log("🚀 Real-time service initialized with optimized room management");
 
     io.on("connection", (socket) => {
       console.log(`Client connected: ${socket.id}`);
@@ -39,14 +47,14 @@ class RealtimeService {
         }
       });
 
-      // Join playlist room
+      // Join playlist room - now using optimized room manager
       socket.on("join-playlist", async (data) => {
-        await this.handleJoinPlaylist(socket, data);
+        await this.handleJoinPlaylistOptimized(socket, data);
       });
 
-      // Leave playlist room
+      // Leave playlist room - now using optimized room manager
       socket.on("leave-playlist", async (data) => {
-        await this.handleLeavePlaylist(socket, data);
+        await this.handleLeavePlaylistOptimized(socket, data);
       });
 
       // Cursor position updates
@@ -88,14 +96,14 @@ class RealtimeService {
         await this.handlePlaylistMessage(socket, data);
       });
 
-      // Presence updates
+      // Presence tracking - now using optimized room manager
       socket.on("user-presence", async (data) => {
-        await this.handlePresenceUpdate(socket, data);
+        await this.handlePresenceUpdateOptimized(socket, data);
       });
 
-      // Disconnect handling
+      // Disconnect handling - now with optimized cleanup
       socket.on("disconnect", () => {
-        this.handleDisconnect(socket);
+        this.handleDisconnectOptimized(socket);
       });
     });
 
@@ -104,6 +112,161 @@ class RealtimeService {
 
     // Set up periodic cleanup
     this.setupPeriodicCleanup();
+  }
+
+  /**
+   * Optimized playlist join handler using room manager
+   */
+  async handleJoinPlaylistOptimized(socket, data) {
+    try {
+      // Handle both old format (string) and new format (object)
+      let playlistId, userId;
+
+      if (typeof data === "string") {
+        playlistId = data;
+        userId = socket.userId;
+      } else {
+        playlistId = data.playlistId;
+        userId = data.userId || socket.userId;
+      }
+
+      if (!userId || !playlistId) {
+        socket.emit("join-playlist-error", {
+          message: "User ID and Playlist ID required",
+        });
+        return;
+      }
+
+      // Validate playlist access
+      const hasAccess = await this.validatePlaylistAccess(userId, playlistId);
+      if (!hasAccess) {
+        socket.emit("join-playlist-error", { message: "Access denied" });
+        return;
+      }
+
+      // Use optimized room manager
+      const result = await this.roomManager.joinPlaylistRoom(socket, playlistId, userId);
+      
+      // Update legacy session tracking for backward compatibility
+      this.connectedUsers.set(userId, {
+        socketId: socket.id,
+        playlistId,
+        cursorPosition: null,
+        status: "active",
+        joinedAt: new Date(),
+      });
+
+      if (!this.playlistSessions.has(playlistId)) {
+        this.playlistSessions.set(playlistId, new Set());
+      }
+      this.playlistSessions.get(playlistId).add(userId);
+
+      socket.emit("join-playlist-success", {
+        playlistId,
+        userCount: result.roomUsers.length,
+        users: result.roomUsers
+      });
+
+      console.log(`✅ User ${userId} joined playlist ${playlistId} (optimized)`);
+      
+    } catch (error) {
+      console.error("Error in optimized join:", error);
+      socket.emit("join-playlist-error", {
+        message: "Failed to join playlist",
+      });
+    }
+  }
+
+  /**
+   * Optimized playlist leave handler using room manager
+   */
+  async handleLeavePlaylistOptimized(socket, data) {
+    try {
+      let playlistId, userId;
+
+      if (typeof data === "string") {
+        playlistId = data;
+        userId = socket.userId;
+      } else {
+        playlistId = data.playlistId;
+        userId = data.userId || socket.userId;
+      }
+
+      if (!userId || !playlistId) {
+        console.error("Missing userId or playlistId for leave playlist");
+        return;
+      }
+
+      // Use optimized room manager
+      await this.roomManager.leavePlaylistRoom(socket, playlistId, userId);
+
+      // Update legacy session tracking for backward compatibility
+      this.connectedUsers.delete(userId);
+      
+      if (this.playlistSessions.has(playlistId)) {
+        this.playlistSessions.get(playlistId).delete(userId);
+        if (this.playlistSessions.get(playlistId).size === 0) {
+          this.playlistSessions.delete(playlistId);
+        }
+      }
+
+      console.log(`✅ User ${userId} left playlist ${playlistId} (optimized)`);
+      
+    } catch (error) {
+      console.error("Error in optimized leave:", error);
+    }
+  }
+
+  /**
+   * Optimized presence update handler
+   */
+  async handlePresenceUpdateOptimized(socket, data) {
+    try {
+      const { playlistId, presence } = data;
+      const userId = socket.userId;
+      
+      if (!userId) return;
+
+      // Use room manager for presence tracking
+      await this.roomManager.updatePresence(userId, {
+        ...presence,
+        currentPlaylist: playlistId,
+        socketId: socket.id
+      });
+      
+    } catch (error) {
+      console.error("Error in optimized presence update:", error);
+    }
+  }
+
+  /**
+   * Optimized disconnect handler
+   */
+  handleDisconnectOptimized(socket) {
+    try {
+      const userId = socket.userId;
+      if (!userId) return;
+
+      // Use room manager for optimized cleanup
+      this.roomManager.handleDisconnect(socket, userId);
+
+      // Legacy cleanup for backward compatibility
+      const userData = this.connectedUsers.get(userId);
+      if (userData) {
+        const { playlistId } = userData;
+        
+        if (this.playlistSessions.has(playlistId)) {
+          this.playlistSessions.get(playlistId).delete(userId);
+        }
+        
+        this.connectedUsers.delete(userId);
+      }
+
+      console.log(`✅ User ${userId} disconnected (optimized cleanup)`);
+      
+    } catch (error) {
+      console.error("Error in optimized disconnect:", error);
+    }
   }
 
   /**
