@@ -5,6 +5,12 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent zoom on double tap for mobile */
+  touch-action: manipulation;
+  /* Better text rendering on mobile */
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
 }
 
 code {
@@ -21,22 +27,29 @@ html, body, #root {
   overflow-x: hidden;
 }
 
-/* Scrollbar styling for webkit browsers */
+/* Enhanced scrollbar styling for webkit browsers */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #888;
   border-radius: 4px;
+  transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+::-webkit-scrollbar-corner {
+  background: #f1f1f1;
 }
 
 /* Dark mode scrollbar */
@@ -52,6 +65,10 @@ html, body, #root {
   ::-webkit-scrollbar-thumb:hover {
     background: #777;
   }
+  
+  ::-webkit-scrollbar-corner {
+    background: #2d2d2d;
+  }
 }
 
 /* Global styles for the collaborative playlist app */
@@ -61,21 +78,148 @@ html, body, #root {
 
 /* Loading animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
 .fade-in {
   animation: fadeIn 0.3s ease-in-out;
 }
 
-/* Responsive design helpers */
+.slide-in-up {
+  animation: slideInUp 0.4s ease-out;
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Mobile-specific improvements */
 @media (max-width: 768px) {
   body {
     font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  /* Improve touch targets */
+  button, 
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better spacing for mobile */
+  .MuiContainer-root {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  
+  /* Optimize card layouts for mobile */
+  .MuiCard-root {
+    margin-bottom: 12px;
+  }
+  
+  /* Improve list item spacing */
+  .MuiListItem-root {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
+/* Extra small devices (portrait phones) */
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+  
+  /* Reduce spacing on very small screens */
+  .MuiContainer-root {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  
+  /* Stack elements more efficiently */
+  .MuiGrid-container {
+    margin: 0 !important;
+  }
+  
+  .MuiGrid-item {
+    padding: 4px !important;
+  }
+}
+
+/* Tablet landscape and desktop */
+@media (min-width: 769px) {
+  /* Optimize for larger screens */
+  .MuiContainer-root {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+}
+
+/* High resolution displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Optimize images and icons for retina displays */
+  .MuiSvgIcon-root {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .MuiButton-root {
+    border: 2px solid currentColor;
+  }
+  
+  .MuiCard-root {
+    border: 1px solid currentColor;
+  }
+}
+
+/* Print styles */
+@media print {
+  * {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+  
+  .MuiAppBar-root,
+  .MuiFab-root,
+  .MuiSpeedDial-root {
+    display: none !important;
   }
 }

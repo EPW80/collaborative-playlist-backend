@@ -1,6 +1,7 @@
 {
-  "short_name": "Playlist Manager",
-  "name": "Collaborative Playlist Manager",
+  "short_name": "BlockBeats",
+  "name": "BlockBeats - Collaborative Playlist Manager", 
+  "description": "Decentralized music collaboration platform with AI-powered features",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +21,26 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#1976d2",
+  "background_color": "#000000",
+  "orientation": "portrait-primary",
+  "categories": ["music", "entertainment", "social"],
+  "lang": "en-US",
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "Create Playlist",
+      "short_name": "Create",
+      "description": "Create a new collaborative playlist",
+      "url": "/dashboard?action=create",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Search Music", 
+      "short_name": "Search",
+      "description": "Search for songs and artists",
+      "url": "/search",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    }
+  ]
 }

@@ -87,7 +87,7 @@ export class AudioManager {
 
     // Store the promise
     this.loadingPromises.set(url, loadingPromise);
-    
+
     return loadingPromise;
   }
 
@@ -102,20 +102,20 @@ export class AudioManager {
     try {
       // Modern browsers require user interaction for autoplay
       const playPromise = audioRef.play();
-      
+
       if (playPromise !== undefined) {
         await playPromise;
       }
-      
+
       return true;
     } catch (error) {
       // Handle different types of play errors
-      if (error.name === 'NotAllowedError') {
-        throw new Error('Autoplay prevented - user interaction required');
-      } else if (error.name === 'NotSupportedError') {
-        throw new Error('Audio format not supported');
-      } else if (error.name === 'AbortError') {
-        throw new Error('Play operation aborted');
+      if (error.name === "NotAllowedError") {
+        throw new Error("Autoplay prevented - user interaction required");
+      } else if (error.name === "NotSupportedError") {
+        throw new Error("Audio format not supported");
+      } else if (error.name === "AbortError") {
+        throw new Error("Play operation aborted");
       } else {
         throw error;
       }

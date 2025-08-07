@@ -74,12 +74,14 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import { playlistAPI, songAPI, rbacAPI } from "../services/api";
 import socketService from "../services/websocket";
-import { AudioManager } from "../utils/audioManager";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import MusicSearch from "../components/MusicSearch";
 import AIFeaturesPanel from "../components/AIFeaturesPanel";
 import AIPlaylistNameGenerator from "../components/AIPlaylistNameGenerator";
 import AISongRecommendations from "../components/AISongRecommendations";
+import Footer from "../components/Footer";
+import LiveAudioPlayer from "../components/LiveAudioPlayer";
+import { useLiveAudio } from "../hooks/useLiveAudio";
 
 // Blockchain-inspired theme
 const createBlockchainTheme = (darkMode) => {
@@ -362,7 +364,7 @@ function PlaylistPage() {
   const [userPermissions, setUserPermissions] = useState(null);
   const [darkMode, setDarkMode] = useState(true); // Default to blockchain dark theme
   const [currentSong, setCurrentSong] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying] = useState(false);
   const [musicSearchOpen, setMusicSearchOpen] = useState(false);
 
   // CRUD operation states
@@ -405,24 +407,28 @@ function PlaylistPage() {
     allowSuggestions: true,
   });
 
-  // Audio playback states
-  const audioRef = useRef(null);
-  const [duration, setDuration] = useState(0);
+  // Live Audio System
+  const {
+    audioRef,
+    playbackState,
+    currentSong: currentAudioSong,
+    playSong,
+    togglePlayback,
+    stopPlayback,
+    seekTo,
+    setVolume: setAudioVolume,
+    skipNext,
+    skipPrevious
+  } = useLiveAudio();
+
+  // Legacy audio state for compatibility
+  const [duration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(50);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
   // Track recently added songs to prevent duplicate processing
   const recentlyAddedSongs = useRef(new Set());
-
-  // Track if we're currently loading/playing audio to prevent race conditions
-  const isAudioOperationInProgress = useRef(false);
-
-  // Track current audio operation to allow cancellation
-  const currentAudioOperation = useRef(null);
-
-  // Audio manager for optimized audio handling
-  const audioManager = useRef(new AudioManager());
 
   // Ref to store debounce timeout
   const playlistUpdateTimeoutRef = useRef(null);
@@ -446,83 +452,13 @@ function PlaylistPage() {
     setSnackbar({ open: true, message, severity });
   }, []);
 
-  // Initialize audio element
-  useEffect(() => {
-    const audio = new Audio();
-    audioRef.current = audio;
-
-    // Audio event listeners
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-      setIsLoading(false);
-    };
-
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-    };
-
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-      // Note: Auto-play next song would be handled by parent component
-    };
-
-    const handleLoadStart = () => {
-      setIsLoading(true);
-    };
-
-    const handleCanPlay = () => {
-      setIsLoading(false);
-    };
-
-    const handleError = (e) => {
-      console.error("Audio error:", e);
-      setIsLoading(false);
-      setIsPlaying(false);
-      // Reset audio operation flags on error
-      isAudioOperationInProgress.current = false;
-      if (currentAudioOperation.current) {
-        currentAudioOperation.current.abort();
-        currentAudioOperation.current = null;
-      }
-      showSnackbar(
-        "Error playing audio. This song may not have a preview available.",
-        "error"
-      );
-    };
-
-    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
-    audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("ended", handleEnded);
-    audio.addEventListener("loadstart", handleLoadStart);
-    audio.addEventListener("canplay", handleCanPlay);
-    audio.addEventListener("error", handleError);
-
-    return () => {
-      // Cancel any ongoing audio operations
-      if (currentAudioOperation.current) {
-        currentAudioOperation.current.abort();
-      }
-
-      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
-      audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("ended", handleEnded);
-      audio.removeEventListener("loadstart", handleLoadStart);
-      audio.removeEventListener("canplay", handleCanPlay);
-      audio.removeEventListener("error", handleError);
-      audio.pause();
-      // Reset audio operation flag on cleanup
-      isAudioOperationInProgress.current = false;
-      currentAudioOperation.current = null;
-    };
-  }, [playlist?.songs, currentSong?._id, showSnackbar]);
-
+  // WebSocket connection and playlist loading
   // Update volume when changed
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume / 100;
     }
-  }, [volume]);
+  }, [volume, audioRef]);
 
   // Close menus when user permissions change to prevent anchor element issues
   useEffect(() => {
@@ -1104,17 +1040,9 @@ function PlaylistPage() {
 
     loadPlaylist();
 
-    // Store audio manager reference for cleanup
-    const currentAudioManager = audioManager.current;
-
     return () => {
       socketService.leavePlaylist(id);
       socketService.removeAllListeners();
-      
-      // Clean up audio manager resources
-      if (currentAudioManager) {
-        currentAudioManager.dispose();
-      }
       
       // Clean up any pending playlist update timeout
       if (playlistUpdateTimeoutRef.current) {
@@ -1136,200 +1064,91 @@ function PlaylistPage() {
 
   const handleSongPlay = async (song) => {
     console.log("🎵 handleSongPlay called with song:", song);
-    if (!audioRef.current) {
-      console.error("❌ No audioRef.current available");
-      return;
-    }
-
-    // If clicking the same song that's already playing, just toggle play/pause
-    const currentSongId = currentSong?._id || currentSong?.id;
-    const newSongId = song._id || song.id;
-    if (currentSong && currentSongId === newSongId && isPlaying) {
-      console.log("🔄 Toggling play/pause for same song");
-      handlePlayPause();
-      return;
-    }
-
-    // Cancel any ongoing audio operation
-    audioManager.current.cancelCurrentOperation();
-
-    // Create new AbortController for this operation
-    const abortController = new AbortController();
-    audioManager.current.currentOperation = abortController;
-
-    // Prevent concurrent audio operations
-    if (isAudioOperationInProgress.current) {
-      console.debug("Audio operation already in progress, cancelling previous");
-    }
-
-    isAudioOperationInProgress.current = true;
-
+    
     try {
-      // Stop current audio completely
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        setIsPlaying(false);
-
-        // Reduced wait time for better responsiveness
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        if (abortController.signal.aborted) return;
-      }
-
-      setCurrentSong(song);
-      setIsLoading(true);
-
-      // Determine audio URL with priority order
-      let audioUrl = null;
-      let audioType = "unknown";
-
-      if (song.metadata?.previewUrl) {
-        audioUrl = song.metadata.previewUrl;
-        audioType = "preview";
-        console.log("🎧 Using song preview URL:", audioUrl);
-        showSnackbar(
-          `Playing preview for "${song.title}" by ${song.artist}`,
-          "info"
-        );
-      } else if (song.spotifyId) {
-        audioUrl = "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3";
-        audioType = "demo_spotify";
-        console.log("🎧 Using demo audio for Spotify song without preview");
-        showSnackbar(
-          `Preview not available for "${song.title}" - playing demo audio`,
-          "warning"
-        );
-      } else {
-        audioUrl = "https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg";
-        audioType = "demo_other";
-        console.log("🎧 Using demo audio for non-Spotify song");
-        showSnackbar(
-          `Playing demo audio for "${song.title}" by ${song.artist}`,
-          "warning"
-        );
-      }
-
-      if (!audioUrl) {
-        console.error("❌ No audio URL available");
-        showSnackbar("Audio preview not available for this song.", "warning");
+      // If clicking the same song that's already playing, just toggle play/pause
+      const currentSongId = currentAudioSong?._id || currentAudioSong?.id;
+      const newSongId = song._id || song.id;
+      
+      if (currentAudioSong && currentSongId === newSongId && playbackState.isPlaying) {
+        console.log("🔄 Toggling play/pause for same song");
+        togglePlayback();
         return;
       }
 
-      console.log(`🔗 Loading ${audioType} audio:`, audioUrl);
-
-      // Use optimized audio loading
-      await audioManager.current.loadAudio(audioRef.current, audioUrl, abortController);
-
-      // Check if operation was cancelled
-      if (abortController.signal.aborted) return;
-
-      console.log("▶️ Attempting to play audio...");
+      // Set current song and play using live audio system
+      setCurrentSong(song);
+      const result = await playSong(song);
       
-      // Use optimized audio playing
-      await audioManager.current.playAudio(audioRef.current, abortController);
-      
-      console.log("✅ Audio play() successful");
-      
-      // Only update state if operation wasn't cancelled
-      if (!abortController.signal.aborted) {
-        setIsPlaying(true);
-        console.log("✅ Audio state updated to playing");
+      // Check if result exists and has success property, or if playSong completed without error
+      if (result && typeof result === 'object' && 'success' in result) {
+        if (result.success) {
+          showSnackbar(
+            `Playing "${song.title}" by ${song.artist}`,
+            "success"
+          );
+        } else {
+          showSnackbar(
+            result.error || "Failed to play audio",
+            "error"
+          );
+        }
+      } else {
+        // If no result object or playSong doesn't return a result, assume success if no error was thrown
+        console.log("✅ Song playback initiated successfully");
+        showSnackbar(
+          `Playing "${song.title}" by ${song.artist}`,
+          "success"
+        );
       }
     } catch (error) {
-      // Don't log errors for cancelled operations
-      if (abortController.signal.aborted || error.message === "Operation cancelled") {
-        console.debug("🔄 Audio operation cancelled");
-        return;
-      }
-
       console.error("❌ Error in handleSongPlay:", error);
-      
-      // Provide user-friendly error messages
-      let userMessage = "Failed to play audio";
-      if (error.message.includes("Autoplay prevented")) {
-        userMessage = "Click play again - browser requires user interaction";
-      } else if (error.message.includes("not supported")) {
-        userMessage = "Audio format not supported by your browser";
-      } else if (error.message.includes("timeout")) {
-        userMessage = "Audio loading timed out - please try again";
-      }
-      
-      showSnackbar(userMessage, "error");
-      setIsPlaying(false);
-    } finally {
-      // Reset operation flags
-      isAudioOperationInProgress.current = false;
-      if (audioManager.current.currentOperation === abortController) {
-        audioManager.current.currentOperation = null;
-      }
-      setIsLoading(false);
+      showSnackbar("Failed to play audio", "error");
     }
   };
 
   const handlePlayPause = async () => {
     console.log(
       "🎮 handlePlayPause called, isPlaying:",
-      isPlaying,
+      playbackState.isPlaying,
+      "currentAudioSong:",
+      currentAudioSong,
       "currentSong:",
       currentSong
     );
-    if (!audioRef.current || !currentSong) {
-      console.error("❌ No audioRef or currentSong available");
-      return;
-    }
-
-    // Cancel any ongoing audio loading operation
-    if (currentAudioOperation.current) {
-      currentAudioOperation.current.abort();
-      currentAudioOperation.current = null;
-    }
-
-    // Prevent concurrent audio operations
-    if (isAudioOperationInProgress.current) {
-      console.debug(
-        "Audio operation in progress, completing current operation first"
-      );
+    
+    // Use either currentAudioSong from the hook or local currentSong as fallback
+    const songToUse = currentAudioSong || currentSong;
+    
+    if (!songToUse) {
+      console.error("❌ No current song available");
+      showSnackbar("No song selected", "error");
       return;
     }
 
     try {
-      if (isPlaying) {
-        console.log("⏸️ Pausing audio");
-        audioRef.current.pause();
-        setIsPlaying(false);
+      // If there's no currentAudioSong but we have a currentSong, load and play it
+      if (!currentAudioSong && currentSong) {
+        console.log("🎵 Loading song first:", currentSong.title);
+        await handleSongPlay(currentSong);
       } else {
-        console.log("▶️ Playing audio, current src:", audioRef.current.src);
-        // Simple play for existing loaded audio
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          await playPromise;
-          console.log("✅ Play promise resolved");
-        }
-        setIsPlaying(true);
-        console.log("✅ Playing state updated");
+        // If song is already loaded, just toggle playback
+        togglePlayback();
       }
     } catch (error) {
       console.error("❌ Error toggling playback:", error);
-      // Only show user-facing errors for non-abort errors
-      if (error.name !== "AbortError" && error.name !== "NotAllowedError") {
-        showSnackbar("Error controlling playback", "error");
-      }
-      setIsPlaying(false);
+      showSnackbar("Error controlling playback", "error");
     }
   };
 
   const handleSeek = (newTime) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
-    }
+    seekTo(newTime);
+    setCurrentTime(newTime);
   };
 
   const handleVolumeChange = (newVolume) => {
     setVolume(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume / 100;
-    }
+    setAudioVolume(newVolume / 100);
   };
 
   if (loading) {
@@ -1381,7 +1200,13 @@ function PlaylistPage() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ bgcolor: "background.default", minHeight: "100vh", pb: 10 }}>
+      <Box sx={{ 
+        bgcolor: "background.default", 
+        minHeight: "100vh", 
+        pb: 10,
+        display: "flex",
+        flexDirection: "column"
+      }}>
         {/* Enhanced App Bar with Blockchain Design */}
         <AppBar
           position="static"
@@ -1478,7 +1303,7 @@ function PlaylistPage() {
         </AppBar>
 
         {/* Main Content with Animations */}
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4, flex: 1 }}>
           <Grid container spacing={3}>
             {/* Playlist Info with Slide Animation */}
             <Grid size={{ xs: 12, md: 8 }}>
@@ -2451,6 +2276,33 @@ function PlaylistPage() {
           playlistId={playlist?._id}
           playlistName={playlist?.name}
         />
+        
+        {/* Live Audio Player */}
+        <LiveAudioPlayer
+          playbackState={playbackState}
+          currentSong={currentAudioSong}
+          onTogglePlayback={togglePlayback}
+          onStop={stopPlayback}
+          onSeek={seekTo}
+          onVolumeChange={setAudioVolume}
+          onNext={() => {
+            const nextIndex = skipNext(playlist?.songs || [], playlist?.songs?.findIndex(s => s._id === currentAudioSong?._id) || -1);
+            if (nextIndex !== -1) {
+              // Additional logic if needed
+            }
+          }}
+          onPrevious={() => {
+            const prevIndex = skipPrevious(playlist?.songs || [], playlist?.songs?.findIndex(s => s._id === currentAudioSong?._id) || -1);
+            if (prevIndex !== -1) {
+              // Additional logic if needed
+            }
+          }}
+          playlist={playlist?.songs || []}
+          currentIndex={playlist?.songs?.findIndex(s => s._id === currentAudioSong?._id) || -1}
+        />
+        
+        {/* Footer with Network Status Monitor */}
+        <Footer />
       </Box>
     </ThemeProvider>
   );

@@ -51,6 +51,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { playlistAPI } from "../services/api";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import MobileNavigation from "../components/MobileNavigation";
+import MobileQuickActions from "../components/MobileQuickActions";
+import Footer from "../components/Footer";
 
 // Create blockchain-inspired theme
 const createBlockchainTheme = (darkMode) =>
@@ -152,6 +155,7 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Create playlist modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -321,6 +325,8 @@ function DashboardPage() {
       <Box
         sx={{
           minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
           background:
             theme.palette.mode === "dark"
               ? "linear-gradient(135deg, #121212 0%, #1e1e1e 50%, #2a2a2a 100%)"
@@ -462,7 +468,7 @@ function DashboardPage() {
         </AppBar>
 
         {/* Main Content */}
-        <Container maxWidth="lg" sx={{ pt: 4, pb: 4 }}>
+        <Container maxWidth="lg" sx={{ pt: 4, pb: 4, flex: 1 }}>
           <Fade in timeout={1000}>
             <Box
               sx={{
@@ -945,6 +951,21 @@ function DashboardPage() {
             {snackbar.message}
           </Alert>
         </Snackbar>
+
+        {/* Mobile Components */}
+        <MobileNavigation 
+          open={mobileNavOpen} 
+          onClose={() => setMobileNavOpen(false)} 
+          user={user} 
+        />
+        <MobileQuickActions 
+          user={user} 
+          onCreatePlaylist={handleCreatePlaylist}
+          notifications={[]} 
+        />
+        
+        {/* Footer with Network Status Monitor */}
+        <Footer />
       </Box>
     </ThemeProvider>
   );
